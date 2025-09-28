@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}在线留言 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- 留言列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments"></i> 我的留言
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="message-list">
+                        {% for message in messages %}
+                        <div class="message-item border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="message-info">
+                                    <h6 class="mb-1">
+                                        {% if message.staff %}
+                                            <i class="fas fa-user-tie text-primary"></i> {{ message.staff.name }} (员工回复)
+                                        {% else %}
+                                            <i class="fas fa-user text-success"></i> 我的留言
+                                        {% endif %}
+                                    </h6>
+                                    <p class="mb-2">{{ message.content }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> {{ message.create_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        {% if message.project %}
+                                        | <i class="fas fa-project-diagram"></i> 
+                                        <a href="{{ url_for('user.project_detail', project_id=message.project.id) }}" 
+                                           class="text-decoration-none">{{ message.project.project_name }}</a>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% if not message.is_read %}
+                                <span class="badge bg-primary">新</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-comment-slash fa-3x mb-3"></i>
+                        <h6>暂无留言记录</h6>
+                        <p>您可以在右侧发送新的留言</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 发送留言 -->
+        <div class="col-md-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-paper-plane"></i> 发送留言
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="messageForm">
+                        <div class="mb-3">
+                            <label for="content" class="form-label">留言内容</label>
+                            <textarea class="form-control" id="content" name="content" 
+                                      rows="6" placeholder="请输入您的留言内容..." required></textarea>
+                            <div class="form-text">
+                                您可以咨询项目相关问题或提出建议
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> 发送留言
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="card-footer">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        我们会及时回复您的留言，请注意查收
+                    </small>
+                </div>
+            </div>
+            
+            <!-- 联系信息 -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-phone"></i> 其他联系方式
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <i class="fas fa-phone text-primary"></i> 
+                        <strong>电话：</strong>0371-12345678
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-envelope text-primary"></i> 
+                        <strong>邮箱：</strong>contact@yiqichuang.com
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-clock text-primary"></i> 
+                        <strong>服务时间：</strong>周一至周五 9:00-18:00
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 表单提交处理
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    const content = document.getElementById('content').value.trim();
+    
+    if (!content) {
+        e.preventDefault();
+        alert('请输入留言内容');
+        return false;
+    }
+    
+    if (content.length > 1000) {
+        e.preventDefault();
+        alert('留言内容不能超过1000个字符');
+        return false;
+    }
+    
+    // 显示发送状态
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

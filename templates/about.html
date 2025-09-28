@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}关于我们 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<!-- 页面头部 -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-5 fw-bold mb-4">关于郑州医企创医疗科技有限公司</h1>
+                <p class="lead">致力于医疗知识产权保护和成果转化的专业公司</p>
+            </div>
+            <div class="col-lg-4">
+                <img src="{{ url_for('static', filename='logo.jpg') }}" alt="公司Logo" class="img-fluid rounded shadow">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 公司简介 -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4">公司简介</h2>
+                        <p class="lead text-center mb-4">
+                            让"医"务人员和"企"业共同"创"造
+                        </p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-bullseye"></i> 公司使命
+                                </h5>
+                                <p>
+                                    郑州医企创医疗科技有限公司致力于医疗知识产权保护和成果转化，
+                                    专业做专利和软件著作权的设计、申请、转化。
+                                    为医疗机构和企业搭建合作桥梁。
+                                </p>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-eye"></i> 公司愿景
+                                </h5>
+                                <p>
+                                    成为医疗知识产权保护和成果转化领域的领军企业，
+                                    推动医疗科技创新发展，为人类健康事业贡献力量。
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-star"></i> 核心优势
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        专业的知识产权团队
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        丰富的医疗行业经验
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        完善的服务体系
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        多项原研产品上市
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        全流程服务保障
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        专业技术支持
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 服务领域 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">服务领域</h2>
+            <p class="text-muted">专注医疗知识产权保护的各个方面</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-file-medical-alt fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">论文指导和发表</h5>
+                        <p class="card-text">
+                            为医务人员提供专业的学术论文指导和发表服务，
+                            提升学术水平，促进医疗科研成果的传播。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-shield-virus fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">专利申请和保护</h5>
+                        <p class="card-text">
+                            专业的医疗器械专利申请、保护和转化服务，
+                            已成功上市多项原研产品。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-laptop-medical fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">软件开发和著作权</h5>
+                        <p class="card-text">
+                            提供软件开发、设计、部署及软件著作权登记的
+                            全流程服务，保护软件知识产权。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 发展历程 -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">发展历程</h2>
+            <p class="text-muted">专业服务，持续创新</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">公司成立</h6>
+                            <p class="text-muted mb-0">
+                                郑州医企创医疗科技有限公司正式成立，
+                                专注医疗知识产权保护服务。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">业务拓展</h6>
+                            <p class="text-muted mb-0">
+                                业务范围扩展至软件开发和软件著作权登记，
+                                形成完整的知识产权服务体系。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">产品上市</h6>
+                            <p class="text-muted mb-0">
+                                多项原研产品成功上市，
+                                在医疗器械专利转化方面取得重大突破。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">服务升级</h6>
+                            <p class="text-muted mb-0">
+                                推出在线服务平台，为客户提供更便捷、
+                                高效的知识产权保护服务。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 团队介绍 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">专业团队</h2>
+            <p class="text-muted">汇聚行业精英，提供专业服务</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-user-md fa-3x text-primary"></i>
+                </div>
+                <h6>医疗专家</h6>
+                <p class="text-muted small">
+                    资深医疗行业专家，
+                    深度理解医疗技术需求
+                </p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-balance-scale fa-3x text-primary"></i>
+                </div>
+                <h6>知识产权律师</h6>
+                <p class="text-muted small">
+                    专业的知识产权律师团队，
+                    提供法律保障
+                </p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-code fa-3x text-primary"></i>
+                </div>
+                <h6>技术开发团队</h6>
+                <p class="text-muted small">
+                    经验丰富的软件开发团队，
+                    技术实力雄厚
+                </p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-headset fa-3x text-primary"></i>
+                </div>
+                <h6>客服团队</h6>
+                <p class="text-muted small">
+                    专业的客服团队，
+                    提供贴心服务
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -1.5rem;
+    top: 0;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+
+.timeline-content {
+    padding-left: 1.5rem;
+}
+</style>
+{% endblock %}

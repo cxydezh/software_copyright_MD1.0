@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<!-- 英雄区域 -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">医疗知识产权保护与成果转化专家</h1>
+                <p class="lead mb-4">
+                    郑州医企创医疗科技有限公司致力于医疗知识产权保护和成果转化，
+                    专业做专利和软件著作权的设计、申请、转化。
+                    为医疗机构和企业搭建合作桥梁，让"医"务人员和"企"业共同"创"造。
+                </p>
+                <div class="d-flex gap-3">
+                    {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-user-plus"></i> 立即注册
+                    </a>
+                    <a href="{{ url_for('main.services') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-info-circle"></i> 了解服务
+                    </a>
+                    {% else %}
+                    {% if current_user.user_type is defined and current_user.user_type == 'user' %}
+                    <a href="{{ url_for('user.apply_project') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-plus"></i> 申请项目
+                    </a>
+                    <a href="{{ url_for('user.dashboard') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-tachometer-alt"></i> 用户中心
+                    </a>
+                    {% elif current_user.user_type is defined and current_user.user_type == 'staff' %}
+                    <a href="{{ url_for('staff.business_dashboard') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-briefcase"></i> 工作台
+                    </a>
+                    <a href="{{ url_for('main.services') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-info-circle"></i> 服务介绍
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="{{ url_for('static', filename='logo.jpg') }}" alt="公司Logo" class="img-fluid rounded shadow">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 特色服务 -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">我们的特色服务</h2>
+            <p class="text-muted">提供医疗知识产权保护和成果转化的全流程服务</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-file-alt fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">论文指导和发表</h5>
+                        <p class="card-text">
+                            提供专业的医疗论文指导和发表服务，帮助医务人员提升学术水平，
+                            促进医疗科研成果的传播和应用。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-shield-alt fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">专利申请和保护</h5>
+                        <p class="card-text">
+                            专业的医疗器械专利申请、保护和转化服务，
+                            已上市多项原研产品，提供专利转化的全流程服务。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-code fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">软件开发和软著登记</h5>
+                        <p class="card-text">
+                            提供软件开发、设计、部署及软件著作权登记的全流程服务，
+                            保护您的软件知识产权。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 业务类型 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">软件著作权登记业务</h2>
+            <p class="text-muted">提供多种类型的软件著作权登记服务</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">
+                            <i class="fas fa-certificate"></i> 软件登记业务
+                        </h5>
+                        <p class="card-text">
+                            协助用户进行软件著作权登记，不包括软件设计开发。
+                            适合已有软件需要进行版权保护的客户。
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> 著作权登记申请</li>
+                            <li><i class="fas fa-check text-success"></i> 材料准备指导</li>
+                            <li><i class="fas fa-check text-success"></i> 流程跟踪服务</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">
+                            <i class="fas fa-laptop-code"></i> 软件设计与登记业务
+                        </h5>
+                        <p class="card-text">
+                            包括软件的设计与开发，但不包括软件部署，
+                            协助用户获得软件著作权登记证书。
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> 软件需求分析</li>
+                            <li><i class="fas fa-check text-success"></i> 软件设计开发</li>
+                            <li><i class="fas fa-check text-success"></i> 著作权登记申请</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">
+                            <i class="fas fa-cloud-upload-alt"></i> 软件部署与登记业务
+                        </h5>
+                        <p class="card-text">
+                            包括软件的开发、设计与部署，
+                            同时协助用户获得软件著作权登记证书。
+                        </p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> 软件全流程开发</li>
+                            <li><i class="fas fa-check text-success"></i> 系统部署上线</li>
+                            <li><i class="fas fa-check text-success"></i> 著作权登记申请</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 申请人类型 -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">服务对象</h2>
+            <p class="text-muted">我们为不同类型的申请人提供专业服务</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-user fa-2x text-primary mb-3"></i>
+                        <h6 class="card-title">个人申请</h6>
+                        <p class="card-text small">
+                            个人开发者的软件著作权申请，
+                            需提供身份证复印件PDF。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-building fa-2x text-primary mb-3"></i>
+                        <h6 class="card-title">事业单位申请</h6>
+                        <p class="card-text small">
+                            事业单位的软件著作权申请，
+                            需提供统一社会信用代码证书。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-handshake fa-2x text-primary mb-3"></i>
+                        <h6 class="card-title">联合申请</h6>
+                        <p class="card-text small">
+                            事业单位与个人联合申请，
+                            需提供双方证件及合作协议。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-users fa-2x text-primary mb-3"></i>
+                        <h6 class="card-title">多人合作</h6>
+                        <p class="card-text small">
+                            多个自然人联合申请，
+                            需提供所有著作权人身份证件。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 服务优势 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">为什么选择我们</h2>
+            <p class="text-muted">专业、高效、可靠的服务保障</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-award fa-3x text-primary"></i>
+                </div>
+                <h5>专业团队</h5>
+                <p class="text-muted">拥有专业的知识产权团队和技术开发团队</p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-clock fa-3x text-primary"></i>
+                </div>
+                <h5>高效服务</h5>
+                <p class="text-muted">提供普通、加急、快速多种服务速度选择</p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-shield-check fa-3x text-primary"></i>
+                </div>
+                <h5>安全保障</h5>
+                <p class="text-muted">严格保护客户信息和知识产权安全</p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-headset fa-3x text-primary"></i>
+                </div>
+                <h5>全程跟踪</h5>
+                <p class="text-muted">提供项目全程跟踪和进度查询服务</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA区域 -->
+<section class="py-5 bg-primary text-white">
+    <div class="container text-center">
+        <h2 class="fw-bold mb-4">准备开始您的知识产权保护之旅？</h2>
+        <p class="lead mb-4">立即注册账户，享受专业的软件著作权登记服务</p>
+        <div class="d-flex justify-content-center gap-3">
+            {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg">
+                <i class="fas fa-user-plus"></i> 免费注册
+            </a>
+            <a href="{{ url_for('main.contact') }}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-phone"></i> 联系咨询
+            </a>
+            {% else %}
+            {% if current_user.user_type is defined and current_user.user_type == 'user' %}
+            <a href="{{ url_for('user.apply_project') }}" class="btn btn-light btn-lg">
+                <i class="fas fa-plus"></i> 申请项目
+            </a>
+            {% endif %}
+            <a href="{{ url_for('main.contact') }}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-phone"></i> 联系我们
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

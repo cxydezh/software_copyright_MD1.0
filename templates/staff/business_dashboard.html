@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}业务员工作台 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-3">
+            <div class="sidebar p-3">
+                <h5 class="mb-3">
+                    <i class="fas fa-user-tie"></i> 业务员
+                </h5>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="{{ url_for('staff.business_dashboard') }}">
+                        <i class="fas fa-tachometer-alt"></i> 工作台
+                    </a>
+                    {% if current_user.position is defined and current_user.position and current_user.position.position == '项目执行者' %}
+                    <a class="nav-link" href="{{ url_for('staff.executor_dashboard') }}">
+                        <i class="fas fa-cogs"></i> 执行者工作台
+                    </a>
+                    {% endif %}
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-chart-bar"></i> 统计报表
+                    </a>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- 主要内容 -->
+        <div class="col-md-9">
+            <!-- 欢迎信息 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">
+                                <i class="fas fa-user-circle"></i> 欢迎，{{ current_user.name }}
+                            </h4>
+                            <p class="card-text text-muted">
+                                您是业务员，负责项目申请的审核和管理工作
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.pending_count }}</h5>
+                                    <p class="card-text">待处理申请</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.confirmed_count }}</h5>
+                                    <p class="card-text">我确认的项目</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card text-white bg-info">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.in_progress_count }}</h5>
+                                    <p class="card-text">执行中项目</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-cog fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card text-white bg-success">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.completed_count }}</h5>
+                                    <p class="card-text">已完成项目</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 待处理申请 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-clock"></i> 待处理申请
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if pending_projects %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>项目名称</th>
+                                            <th>申请人</th>
+                                            <th>项目类型</th>
+                                            <th>申请时间</th>
+                                            <th>优先级</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for project in pending_projects %}
+                                        <tr>
+                                            <td>{{ project.project_name }}</td>
+                                            <td>{{ project.applicant.name if project.applicant else '未知' }}</td>
+                                            <td>
+                                                <small class="text-muted">{{ project.project_type }}</small>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ project.apply_time.strftime('%Y-%m-%d') if project.apply_time else '' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if project.priority == '快速' %}bg-danger
+                                                    {% elif project.priority == '加急' %}bg-warning
+                                                    {% else %}bg-info
+                                                    {% endif %}">
+                                                    {{ project.priority }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('staff.project_detail', project_id=project.id) }}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <button class="btn btn-sm btn-success" 
+                                                            onclick="confirmProject({{ project.id }})">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="p-3 text-center text-muted">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <p>暂无待处理的申请</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 我确认的项目 -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-tasks"></i> 我确认的项目
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if confirmed_projects %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>项目名称</th>
+                                            <th>申请人</th>
+                                            <th>状态</th>
+                                            <th>确认时间</th>
+                                            <th>执行者</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for project in confirmed_projects[:10] %}
+                                        <tr>
+                                            <td>{{ project.project_name }}</td>
+                                            <td>{{ project.applicant.name if project.applicant else '未知' }}</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if project.status == '已确认' %}bg-primary
+                                                    {% elif project.status == '已立项' %}bg-info
+                                                    {% elif project.status == '执行中' %}bg-warning
+                                                    {% elif project.status == '已完成' %}bg-success
+                                                    {% else %}bg-secondary
+                                                    {% endif %}">
+                                                    {{ project.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ project.confirm_time.strftime('%Y-%m-%d') if project.confirm_time else '' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ project.executor.name if project.executor else '未分配' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('staff.project_detail', project_id=project.id) }}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    {% if project.status == '已确认' %}
+                                                    <button class="btn btn-sm btn-info" onclick="approveProject({{ project.id }})">
+                                                        <i class="fas fa-arrow-right"></i> 立项
+                                                    </button>
+                                                    {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="p-3 text-center text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                <p>暂无确认的项目</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if confirmed_projects|length > 10 %}
+                        <div class="card-footer text-center">
+                            <a href="#" class="btn btn-sm btn-primary">查看全部</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmProject(projectId) {
+    if (confirm('确定要确认这个项目申请吗？')) {
+        fetch(`/staff/project/${projectId}/confirm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目确认成功！');
+                location.reload();
+            } else {
+                alert('确认项目失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+
+function approveProject(projectId) {
+    if (confirm('确定要将此项目立项吗？立项后将进入执行队列。')) {
+        fetch(`/staff/project/${projectId}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目立项成功！');
+                location.reload();
+            } else {
+                alert('立项失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+</script>
+{% endblock %}

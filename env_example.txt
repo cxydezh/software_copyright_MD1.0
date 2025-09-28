@@ -1,0 +1,16 @@
+# 环境变量配置文件示例
+# 复制此文件为 .env 并填入实际值
+
+# 数据库配置
+DB_PASSWORD=your_mysql_password_here
+DEV_DATABASE_URL=mysql+pymysql://webuser:your_mysql_password_here@127.0.0.1:3306/software_copyright
+
+# 应用配置
+SECRET_KEY=your-secret-key-here
+FLASK_ENV=development
+
+# MySQL连接参数
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=webuser
+MYSQL_DATABASE=software_copyright

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}个人资料 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- 页面标题 -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-primary">
+                        <i class="fas fa-user-edit"></i> 个人资料
+                    </h2>
+                    <p class="card-text text-muted">
+                        管理您的个人信息和账户设置
+                    </p>
+                </div>
+            </div>
+
+            <!-- 个人信息表单 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user"></i> 基本信息
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="profileForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <!-- 姓名 -->
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">姓名</label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           value="{{ current_user.name }}" required>
+                                </div>
+
+                                <!-- 性别 -->
+                                <div class="mb-3">
+                                    <label for="gender" class="form-label">性别</label>
+                                    <select class="form-select" id="gender" name="gender">
+                                        <option value="">请选择</option>
+                                        <option value="男" {{ 'selected' if current_user.gender == '男' else '' }}>男</option>
+                                        <option value="女" {{ 'selected' if current_user.gender == '女' else '' }}>女</option>
+                                    </select>
+                                </div>
+
+                                <!-- 手机号 -->
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">手机号码</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ current_user.phone or '' }}" pattern="^1[3-9]\d{9}$">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <!-- 邮箱（只读） -->
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">邮箱地址</label>
+                                    <input type="email" class="form-control" id="email" 
+                                           value="{{ current_user.email }}" readonly>
+                                    <div class="form-text">邮箱地址不可修改</div>
+                                </div>
+
+                                <!-- 身份证号 -->
+                                <div class="mb-3">
+                                    <label for="id_number" class="form-label">身份证号</label>
+                                    <input type="text" class="form-control" id="id_number" name="id_number" 
+                                           value="{{ current_user.id_number or '' }}" 
+                                           pattern="^\d{17}[\dXx]$" maxlength="18">
+                                    <div class="form-text">用于软件著作权申请</div>
+                                </div>
+
+                                <!-- 注册时间（只读） -->
+                                <div class="mb-3">
+                                    <label for="register_time" class="form-label">注册时间</label>
+                                    <input type="text" class="form-control" 
+                                           value="{{ current_user.register_time.strftime('%Y-%m-%d %H:%M:%S') if current_user.register_time else '未知' }}" 
+                                           readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- 密码修改 -->
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-lock"></i> 密码修改
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="current_password" class="form-label">当前密码</label>
+                                    <input type="password" class="form-control" id="current_password" 
+                                           name="current_password" placeholder="如需修改密码请输入当前密码">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">新密码</label>
+                                    <input type="password" class="form-control" id="new_password" 
+                                           name="new_password" placeholder="输入新密码" minlength="6">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">确认新密码</label>
+                                    <input type="password" class="form-control" id="confirm_password" 
+                                           name="confirm_password" placeholder="再次输入新密码">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 提交按钮 -->
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('user.dashboard') }}" class="btn btn-secondary me-3">
+                                <i class="fas fa-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> 保存修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 安全提示 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-shield-alt text-success"></i> 安全提示
+                    </h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li>• 请使用真实信息，以便我们为您提供服务</li>
+                        <li>• 身份证号用于软件著作权申请，请确保准确</li>
+                        <li>• 密码建议使用字母、数字组合，长度至少6位</li>
+                        <li>• 如有疑问，请联系客服：0371-12345678</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 密码确认验证
+function checkPasswordMatch() {
+    const newPassword = document.getElementById('new_password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const confirmField = document.getElementById('confirm_password');
+    
+    if (newPassword && confirmPassword && newPassword !== confirmPassword) {
+        confirmField.classList.add('is-invalid');
+        return false;
+    } else {
+        confirmField.classList.remove('is-invalid');
+        return true;
+    }
+}
+
+document.getElementById('new_password').addEventListener('input', checkPasswordMatch);
+document.getElementById('confirm_password').addEventListener('input', checkPasswordMatch);
+
+// 表单提交验证
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    const newPassword = document.getElementById('new_password').value;
+    const currentPassword = document.getElementById('current_password').value;
+    
+    // 如果要修改密码，必须输入当前密码
+    if (newPassword && !currentPassword) {
+        e.preventDefault();
+        alert('修改密码需要先输入当前密码');
+        document.getElementById('current_password').focus();
+        return false;
+    }
+    
+    // 检查密码确认
+    if (!checkPasswordMatch()) {
+        e.preventDefault();
+        alert('新密码确认不一致');
+        return false;
+    }
+    
+    // 显示保存状态
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+    submitBtn.disabled = true;
+});
+
+// 身份证号验证
+document.getElementById('id_number').addEventListener('input', function() {
+    const idNumber = this.value;
+    const idRegex = /^\d{17}[\dXx]$/;
+    
+    if (idNumber && !idRegex.test(idNumber)) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+
+// 手机号验证
+document.getElementById('phone').addEventListener('input', function() {
+    const phone = this.value;
+    const phoneRegex = /^1[3-9]\d{9}$/;
+    
+    if (phone && !phoneRegex.test(phone)) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+</script>
+{% endblock %}

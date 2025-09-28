@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}用户注册 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-plus"></i> 用户注册
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" id="registerForm">
+                        <!-- 姓名 -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label">姓名 <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-user"></i>
+                                </span>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       placeholder="请输入真实姓名" required>
+                            </div>
+                        </div>
+                        
+                        <!-- 邮箱 -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">邮箱地址 <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       placeholder="请输入邮箱地址" required>
+                            </div>
+                            <div class="form-text">邮箱将用于登录和接收重要通知</div>
+                        </div>
+                        
+                        <!-- 手机号 -->
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">手机号码</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-phone"></i>
+                                </span>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       placeholder="请输入手机号码" pattern="^1[3-9]\d{9}$">
+                            </div>
+                        </div>
+                        
+                        <!-- 密码 -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码 <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       placeholder="请输入密码" required minlength="6">
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">密码长度至少6位</div>
+                        </div>
+                        
+                        <!-- 确认密码 -->
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">确认密码 <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                       placeholder="请再次输入密码" required>
+                                <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div id="passwordMismatch" class="form-text text-danger" style="display: none;">
+                                两次输入的密码不一致
+                            </div>
+                        </div>
+                        
+                        <!-- 服务协议 -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="agreement" required>
+                            <label class="form-check-label" for="agreement">
+                                我已阅读并同意 <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#agreementModal">用户服务协议</a> 和 
+                                <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#privacyModal">隐私政策</a>
+                            </label>
+                        </div>
+                        
+                        <!-- 注册按钮 -->
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg" id="registerBtn">
+                                <i class="fas fa-user-plus"></i> 注册账户
+                            </button>
+                        </div>
+                        
+                        <!-- 其他选项 -->
+                        <div class="text-center">
+                            <p class="mb-0">
+                                已有账户？ 
+                                <a href="{{ url_for('auth.login') }}" class="text-decoration-none">立即登录</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 注册说明 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-info"></i> 注册说明
+                    </h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li>注册成功后，您可以申请软件著作权登记项目</li>
+                        <li>我们会通过邮箱和短信通知您项目进度</li>
+                        <li>如有问题，请联系客服：0371-12345678</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户服务协议模态框 -->
+<div class="modal fade" id="agreementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">用户服务协议</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. 服务内容</h6>
+                <p>郑州医企创医疗科技有限公司为用户提供软件著作权登记相关服务，包括但不限于软件开发、设计、部署及著作权申请等。</p>
+                
+                <h6>2. 用户义务</h6>
+                <p>用户应提供真实、准确的信息，配合完成项目所需的各项工作，按时支付相关费用。</p>
+                
+                <h6>3. 知识产权</h6>
+                <p>用户委托开发的软件著作权归用户所有，公司承诺保护用户的知识产权不受侵犯。</p>
+                
+                <h6>4. 免责声明</h6>
+                <p>因不可抗力因素导致的服务延迟或中断，公司不承担责任。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 隐私政策模态框 -->
+<div class="modal fade" id="privacyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">隐私政策</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. 信息收集</h6>
+                <p>我们收集您提供的个人信息，包括姓名、邮箱、手机号等，用于提供服务和联系您。</p>
+                
+                <h6>2. 信息使用</h6>
+                <p>您的个人信息仅用于提供服务、项目沟通和法律要求的情况下使用。</p>
+                
+                <h6>3. 信息保护</h6>
+                <p>我们采用适当的技术和管理措施保护您的个人信息安全。</p>
+                
+                <h6>4. 信息共享</h6>
+                <p>未经您同意，我们不会向第三方共享您的个人信息，法律要求的情况除外。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 切换密码显示/隐藏
+    function togglePasswordVisibility(inputId, buttonId) {
+        document.getElementById(buttonId).addEventListener('click', function() {
+            const passwordInput = document.getElementById(inputId);
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    }
+    
+    togglePasswordVisibility('password', 'togglePassword');
+    togglePasswordVisibility('confirm_password', 'toggleConfirmPassword');
+    
+    // 密码确认验证
+    function checkPasswordMatch() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        const mismatchDiv = document.getElementById('passwordMismatch');
+        const registerBtn = document.getElementById('registerBtn');
+        
+        if (confirmPassword && password !== confirmPassword) {
+            mismatchDiv.style.display = 'block';
+            registerBtn.disabled = true;
+        } else {
+            mismatchDiv.style.display = 'none';
+            registerBtn.disabled = false;
+        }
+    }
+    
+    document.getElementById('password').addEventListener('input', checkPasswordMatch);
+    document.getElementById('confirm_password').addEventListener('input', checkPasswordMatch);
+    
+    // 手机号验证
+    document.getElementById('phone').addEventListener('input', function() {
+        const phone = this.value;
+        const phoneRegex = /^1[3-9]\d{9}$/;
+        
+        if (phone && !phoneRegex.test(phone)) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // 表单提交验证
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        const agreement = document.getElementById('agreement').checked;
+        
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            alert('两次输入的密码不一致');
+            return false;
+        }
+        
+        if (!agreement) {
+            e.preventDefault();
+            alert('请阅读并同意用户服务协议和隐私政策');
+            return false;
+        }
+        
+        // 显示加载状态
+        const registerBtn = document.getElementById('registerBtn');
+        registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 注册中...';
+        registerBtn.disabled = true;
+    });
+</script>
+{% endblock %}

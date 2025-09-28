@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}服务项目 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<!-- 页面头部 -->
+<section class="hero-section">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-5 fw-bold mb-4">我们的服务</h1>
+            <p class="lead">专业的医疗知识产权保护和成果转化服务</p>
+        </div>
+    </div>
+</section>
+
+<!-- 主要服务 -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            {% for service in services %}
+            <div class="col-lg-4">
+                <div class="card h-100 feature-card">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="{{ service.icon }} fa-3x text-primary"></i>
+                        </div>
+                        <h4 class="card-title">{{ service.title }}</h4>
+                        <p class="card-text">{{ service.description }}</p>
+                        <div class="mt-auto">
+                            {% if current_user.is_authenticated %}
+                                {% if current_user.user_type is defined and current_user.user_type == 'user' %}
+                                <a href="{{ url_for('user.apply_project') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> 申请服务
+                                </a>
+                                {% elif current_user.user_type is defined and current_user.user_type == 'staff' %}
+                                <a href="{{ url_for('staff.apply_business') }}" class="btn btn-primary">
+                                    <i class="fas fa-user-tie"></i> 代客申请
+                                </a>
+                                {% endif %}
+                            {% else %}
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-user-plus"></i> 注册申请
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- 软件著作权业务类型 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">软件著作权登记业务</h2>
+            <p class="text-muted">提供多种类型的软件著作权登记服务，满足不同需求</p>
+        </div>
+        
+        <div class="row g-4">
+            {% for business_type in business_types %}
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header text-center">
+                        <h5 class="mb-0 text-primary">{{ business_type.name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ business_type.description }}</p>
+                        
+                        {% if business_type.name == '软件登记业务' %}
+                        <h6 class="text-secondary">服务内容：</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>著作权登记申请</li>
+                            <li><i class="fas fa-check text-success me-2"></i>材料准备指导</li>
+                            <li><i class="fas fa-check text-success me-2"></i>流程跟踪服务</li>
+                            <li><i class="fas fa-check text-success me-2"></i>证书获取协助</li>
+                        </ul>
+                        <div class="mt-3">
+                            <span class="badge bg-info">适合已有软件的客户</span>
+                        </div>
+                        
+                        {% elif business_type.name == '软件设计与登记业务' %}
+                        <h6 class="text-secondary">服务内容：</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>需求分析</li>
+                            <li><i class="fas fa-check text-success me-2"></i>软件设计开发</li>
+                            <li><i class="fas fa-check text-success me-2"></i>代码编写</li>
+                            <li><i class="fas fa-check text-success me-2"></i>著作权登记申请</li>
+                        </ul>
+                        <div class="mt-3">
+                            <span class="badge bg-success">包含开发服务</span>
+                        </div>
+                        
+                        {% else %}
+                        <h6 class="text-secondary">服务内容：</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>全流程开发</li>
+                            <li><i class="fas fa-check text-success me-2"></i>系统部署上线</li>
+                            <li><i class="fas fa-check text-success me-2"></i>运维支持</li>
+                            <li><i class="fas fa-check text-success me-2"></i>著作权登记申请</li>
+                        </ul>
+                        <div class="mt-3">
+                            <span class="badge bg-primary">全流程服务</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-center">
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.user_type is defined and current_user.user_type == 'user' %}
+                            <a href="{{ url_for('user.apply_project') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-paper-plane"></i> 申请此服务
+                            </a>
+                            {% elif current_user.user_type is defined and current_user.user_type == 'staff' %}
+                            <a href="{{ url_for('staff.apply_business') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-user-tie"></i> 代客申请
+                            </a>
+                            {% endif %}
+                        {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-plus"></i> 注册申请
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- 申请人类型 -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">服务对象</h2>
+            <p class="text-muted">我们为不同类型的申请人提供专业服务</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-user fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">个人申请</h5>
+                        <p class="card-text">
+                            适合个人开发者或自然人申请软件著作权
+                        </p>
+                        <div class="mt-auto">
+                            <h6 class="text-secondary">所需材料：</h6>
+                            <ul class="list-unstyled small">
+                                <li>身份证复印件PDF</li>
+                                <li>软件源代码</li>
+                                <li>软件说明书</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-building fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">事业单位申请</h5>
+                        <p class="card-text">
+                            适合事业单位作为唯一申请人的情况
+                        </p>
+                        <div class="mt-auto">
+                            <h6 class="text-secondary">所需材料：</h6>
+                            <ul class="list-unstyled small">
+                                <li>统一社会信用代码证书</li>
+                                <li>软件源代码</li>
+                                <li>软件说明书</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-handshake fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">事业单位联合个人</h5>
+                        <p class="card-text">
+                            适合事业单位与个人合作开发的项目
+                        </p>
+                        <div class="mt-auto">
+                            <h6 class="text-secondary">所需材料：</h6>
+                            <ul class="list-unstyled small">
+                                <li>单位证书+身份证</li>
+                                <li>合作开发合同</li>
+                                <li>软件相关材料</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="card text-center h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-users fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">自然人联合申请</h5>
+                        <p class="card-text">
+                            适合多个自然人共同开发的项目
+                        </p>
+                        <div class="mt-auto">
+                            <h6 class="text-secondary">所需材料：</h6>
+                            <ul class="list-unstyled small">
+                                <li>所有人身份证复印件</li>
+                                <li>合作协议</li>
+                                <li>软件相关材料</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 服务流程 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">服务流程</h2>
+            <p class="text-muted">标准化的服务流程，确保高效完成</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="process-timeline">
+                    <div class="process-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h6>提交申请</h6>
+                            <p class="small text-muted">用户在线提交项目申请，填写详细信息</p>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h6>业务确认</h6>
+                            <p class="small text-muted">业务员审核申请，确认项目可行性</p>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h6>项目立项</h6>
+                            <p class="small text-muted">项目正式立项，分配执行者</p>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h6>项目执行</h6>
+                            <p class="small text-muted">执行者进行软件开发或材料准备</p>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h6>提交审核</h6>
+                            <p class="small text-muted">向国家版权保护中心提交申请</p>
+                        </div>
+                    </div>
+                    
+                    <div class="process-step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <h6>获取证书</h6>
+                            <p class="small text-muted">获得软件著作权登记证书</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 服务保障 -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">服务保障</h2>
+            <p class="text-muted">专业、高效、可靠的服务承诺</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-shield-check fa-3x text-success"></i>
+                </div>
+                <h6>质量保证</h6>
+                <p class="text-muted small">
+                    严格的质量控制体系，
+                    确保服务质量
+                </p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-clock fa-3x text-info"></i>
+                </div>
+                <h6>时效保证</h6>
+                <p class="text-muted small">
+                    提供普通、加急、快速
+                    多种时效选择
+                </p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-eye fa-3x text-warning"></i>
+                </div>
+                <h6>过程透明</h6>
+                <p class="text-muted small">
+                    全程进度可查，
+                    服务过程透明化
+                </p>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-headset fa-3x text-primary"></i>
+                </div>
+                <h6>专业支持</h6>
+                <p class="text-muted small">
+                    专业客服团队，
+                    提供全程支持
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.process-timeline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.process-step {
+    flex: 1;
+    min-width: 150px;
+    text-align: center;
+    position: relative;
+}
+
+.process-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 25px;
+    right: -50%;
+    width: 100%;
+    height: 2px;
+    background: #dee2e6;
+    z-index: -1;
+}
+
+.step-number {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin: 0 auto 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.step-content h6 {
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .process-timeline {
+        flex-direction: column;
+    }
+    
+    .process-step:not(:last-child)::after {
+        display: none;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}编辑项目 - {{ project.project_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <!-- 页面标题 -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-primary">
+                        <i class="fas fa-edit"></i> 编辑项目申请
+                    </h2>
+                    <p class="card-text text-muted">
+                        项目：{{ project.project_name }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- 编辑表单 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-form"></i> 项目信息编辑
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="editProjectForm">
+                        <div class="row">
+                            <!-- 基本信息 -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle"></i> 基本信息
+                                </h6>
+                                
+                                <!-- 项目名称 -->
+                                <div class="mb-3">
+                                    <label for="project_name" class="form-label">
+                                        项目名称 <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="project_name" 
+                                           name="project_name" required value="{{ project.project_name }}">
+                                </div>
+
+                                <!-- 项目类型 -->
+                                <div class="mb-3">
+                                    <label for="project_type" class="form-label">
+                                        项目类型 <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="project_type" name="project_type" required>
+                                        {% for type in project_types %}
+                                        <option value="{{ type }}" {{ 'selected' if type == project.project_type else '' }}>
+                                            {{ type }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- 申请人类型 -->
+                                <div class="mb-3">
+                                    <label for="applicant_type" class="form-label">
+                                        申请人类型 <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="applicant_type" name="applicant_type" required>
+                                        {% for type in applicant_types %}
+                                        <option value="{{ type }}" {{ 'selected' if type == project.applicant_type else '' }}>
+                                            {{ type }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- 优先级 -->
+                                <div class="mb-3">
+                                    <label for="priority" class="form-label">服务速度</label>
+                                    <select class="form-select" id="priority" name="priority">
+                                        {% for p in priorities %}
+                                        <option value="{{ p }}" {{ 'selected' if p == project.priority else '' }}>
+                                            {{ p }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 详细信息 -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-file-alt"></i> 详细信息
+                                </h6>
+
+                                <!-- 著作权人 -->
+                                <div class="mb-3">
+                                    <label for="copyright_owner" class="form-label">
+                                        著作权人 <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="copyright_owner" 
+                                           name="copyright_owner" required value="{{ project.copyright_owner }}">
+                                </div>
+
+                                <!-- 软著申请人 -->
+                                <div class="mb-3">
+                                    <label for="software_applicant_name" class="form-label">
+                                        软著申请人名称
+                                    </label>
+                                    <input type="text" class="form-control" id="software_applicant_name" 
+                                           name="software_applicant_name" 
+                                           value="{{ project.software_applicant_name or '' }}">
+                                </div>
+
+                                <!-- 项目备注 -->
+                                <div class="mb-3">
+                                    <label for="remarks" class="form-label">项目备注</label>
+                                    <textarea class="form-control" id="remarks" name="remarks" 
+                                              rows="6">{{ project.remarks or '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 提交按钮 -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <a href="{{ url_for('user.project_detail', project_id=project.id) }}" 
+                                   class="btn btn-secondary me-3">
+                                    <i class="fas fa-times"></i> 取消
+                                </a>
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save"></i> 保存修改
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 编辑说明 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-exclamation-triangle text-warning"></i> 编辑说明
+                    </h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li>• 只有状态为"待确认"的项目才能编辑</li>
+                        <li>• 项目一旦被业务员确认，将无法再次编辑</li>
+                        <li>• 请确保信息准确无误，以免影响后续流程</li>
+                        <li>• 如有疑问，请通过在线留言联系我们</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 表单验证
+document.getElementById('editProjectForm').addEventListener('submit', function(e) {
+    const requiredFields = ['project_name', 'project_type', 'applicant_type', 'copyright_owner'];
+    let isValid = true;
+    
+    requiredFields.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('请填写所有必填字段');
+        return false;
+    }
+    
+    // 显示保存状态
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

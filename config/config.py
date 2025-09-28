@@ -1,0 +1,83 @@
+import os
+from datetime import timedelta
+from urllib.parse import quote_plus
+
+class Config:
+    """基础配置类"""
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    
+    # 数据库配置
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_RECORD_QUERIES = True
+    
+    # 会话配置
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
+    
+    # 文件上传配置
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    UPLOAD_FOLDER = 'uploads'
+    
+    # 安全配置
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = None
+
+class DevelopmentConfig(Config):
+    """开发环境配置"""
+    DEBUG = True
+    # 优先使用MySQL，如果连接失败则回退到SQLite
+    def get_database_uri():
+        db_password = os.environ.get('DB_PASSWORD')
+        if db_password:
+            # URL编码密码以处理特殊字符
+            encoded_password = quote_plus(db_password)
+            return f'mysql+pymysql://webuser:{encoded_password}@127.0.0.1:3306/software_copyright'
+        else:
+            return 'sqlite:///software_copyright.db'
+    
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or get_database_uri()
+
+class ProductionConfig(Config):
+    """生产环境配置"""
+    DEBUG = False
+    def get_database_uri():
+        db_password = os.environ.get('DB_PASSWORD')
+        if db_password:
+            # URL编码密码以处理特殊字符
+            encoded_password = quote_plus(db_password)
+            return f'mysql+pymysql://webuser:{encoded_password}@127.0.0.1:3306/software_copyright'
+        else:
+            return 'sqlite:///software_copyright.db'
+    
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or get_database_uri()
+
+class TestingConfig(Config):
+    """测试环境配置"""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig
+}
+
+# 本地客户端配置
+LOCAL_CONFIG = {
+    'LOCAL_DB_PATH': 'D:/SoftwareCopyrightMS/Database/local.db',
+    'BASE_DIR': 'D:/SoftwareCopyrightMS',
+    'USCCC_DIR': 'D:/SoftwareCopyrightMS/USCCC',
+    'IDPDF_DIR': 'D:/SoftwareCopyrightMS/IDPDF',
+    'MODEL_DIR': 'D:/SoftwareCopyrightMS/model',
+    'CONTRACT_DIR': 'D:/SoftwareCopyrightMS/model/contract',
+    'MATERIAL_DIR': 'D:/SoftwareCopyrightMS/model/material',
+    'PROJECT_FILE_DIR': 'D:/SoftwareCopyrightMS/ProjectFile',
+    
+    # 网站链接
+    'COMPANY_WEBSITE': 'http://localhost:5000',
+    'COPYRIGHT_CENTER_URL': 'https://www.ccopyright.com.cn',
+    
+    # 浏览器配置
+    'BROWSER_PATH': 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+}

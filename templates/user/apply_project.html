@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}申请项目 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <!-- 页面标题 -->
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <h2 class="card-title text-primary">
+                        <i class="fas fa-plus-circle"></i> 申请软件著作权登记项目
+                    </h2>
+                    <p class="card-text text-muted">
+                        请填写详细的项目信息，我们将为您提供专业的软件著作权登记服务
+                    </p>
+                </div>
+            </div>
+
+            <!-- 申请表单 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit"></i> 项目申请表
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="projectForm">
+                        <div class="row">
+                            <!-- 基本信息 -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle"></i> 基本信息
+                                </h6>
+                                
+                                <!-- 项目名称 -->
+                                <div class="mb-3">
+                                    <label for="project_name" class="form-label">
+                                        项目名称 <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="project_name" 
+                                           name="project_name" required
+                                           placeholder="请输入软件项目的完整名称">
+                                    <div class="form-text">
+                                        建议格式：XX管理系统 / XX软件 / XX平台
+                                    </div>
+                                </div>
+
+                                <!-- 项目类型 -->
+                                <div class="mb-3">
+                                    <label for="project_type" class="form-label">
+                                        项目类型 <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="project_type" name="project_type" required>
+                                        <option value="">请选择项目类型</option>
+                                        {% for type in project_types %}
+                                        <option value="{{ type }}">{{ type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                        根据您的需求选择合适的服务类型
+                                    </div>
+                                </div>
+
+                                <!-- 申请人类型 -->
+                                <div class="mb-3">
+                                    <label for="applicant_type" class="form-label">
+                                        申请人类型 <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="applicant_type" name="applicant_type" required>
+                                        <option value="">请选择申请人类型</option>
+                                        {% for type in applicant_types %}
+                                        <option value="{{ type }}">{{ type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                        不同类型需要提供不同的证件材料
+                                    </div>
+                                </div>
+
+                                <!-- 优先级 -->
+                                <div class="mb-3">
+                                    <label for="priority" class="form-label">服务速度</label>
+                                    <select class="form-select" id="priority" name="priority">
+                                        <option value="普通">普通 (30-45个工作日)</option>
+                                        <option value="加急">加急 (15-20个工作日)</option>
+                                        <option value="快速">快速 (5-10个工作日)</option>
+                                    </select>
+                                    <div class="form-text">
+                                        加急和快速服务将产生额外费用
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 详细信息 -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-file-alt"></i> 详细信息
+                                </h6>
+
+                                <!-- 著作权人 -->
+                                <div class="mb-3">
+                                    <label for="copyright_owner" class="form-label">
+                                        著作权人 <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="copyright_owner" 
+                                           name="copyright_owner" required
+                                           placeholder="请输入著作权人姓名或单位名称">
+                                    <div class="form-text">
+                                        个人申请填写姓名，单位申请填写单位全称
+                                    </div>
+                                </div>
+
+                                <!-- 软著申请人 -->
+                                <div class="mb-3">
+                                    <label for="software_applicant_name" class="form-label">
+                                        软著申请人名称
+                                    </label>
+                                    <input type="text" class="form-control" id="software_applicant_name" 
+                                           name="software_applicant_name" 
+                                           placeholder="如与著作权人不同，请填写">
+                                    <div class="form-text">
+                                        通常与著作权人相同，如不同请填写
+                                    </div>
+                                </div>
+
+                                <!-- 项目备注 -->
+                                <div class="mb-3">
+                                    <label for="remarks" class="form-label">项目备注</label>
+                                    <textarea class="form-control" id="remarks" name="remarks" 
+                                              rows="4" placeholder="请描述项目的功能特点、技术要求或其他特殊说明"></textarea>
+                                    <div class="form-text">
+                                        详细的项目描述有助于我们提供更好的服务
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 服务说明 -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-info-circle"></i> 服务说明
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <strong>软件登记业务：</strong>
+                                            <p class="small mb-1">仅协助进行软件著作权登记，不包括软件开发</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>软件设计与登记：</strong>
+                                            <p class="small mb-1">包含软件设计开发和著作权登记，不含部署</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>软件部署与登记：</strong>
+                                            <p class="small mb-1">全流程服务，含开发、部署和著作权登记</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 提交按钮 -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <button type="button" class="btn btn-secondary me-3" onclick="history.back()">
+                                    <i class="fas fa-arrow-left"></i> 返回
+                                </button>
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-paper-plane"></i> 提交申请
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 申请流程 -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-route"></i> 申请流程
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2">
+                            <div class="process-step">
+                                <div class="step-icon bg-primary text-white">1</div>
+                                <p class="small mt-2">提交申请</p>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="process-step">
+                                <div class="step-icon bg-secondary text-white">2</div>
+                                <p class="small mt-2">业务确认</p>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="process-step">
+                                <div class="step-icon bg-secondary text-white">3</div>
+                                <p class="small mt-2">项目立项</p>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="process-step">
+                                <div class="step-icon bg-secondary text-white">4</div>
+                                <p class="small mt-2">项目执行</p>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="process-step">
+                                <div class="step-icon bg-secondary text-white">5</div>
+                                <p class="small mt-2">提交审核</p>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="process-step">
+                                <div class="step-icon bg-secondary text-white">6</div>
+                                <p class="small mt-2">获取证书</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin: 0 auto;
+}
+
+.process-step {
+    position: relative;
+}
+
+.process-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: -50%;
+    width: 100%;
+    height: 2px;
+    background: #dee2e6;
+    z-index: -1;
+}
+
+@media (max-width: 768px) {
+    .process-step:not(:last-child)::after {
+        display: none;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 表单验证
+document.getElementById('projectForm').addEventListener('submit', function(e) {
+    const requiredFields = ['project_name', 'project_type', 'applicant_type', 'copyright_owner'];
+    let isValid = true;
+    
+    requiredFields.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('请填写所有必填字段');
+        return false;
+    }
+    
+    // 显示提交状态
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+    submitBtn.disabled = true;
+});
+
+// 申请人类型变化时的提示
+document.getElementById('applicant_type').addEventListener('change', function() {
+    const type = this.value;
+    const copyrightOwnerField = document.getElementById('copyright_owner');
+    
+    switch(type) {
+        case '个人':
+            copyrightOwnerField.placeholder = '请输入个人姓名';
+            break;
+        case '事业单位':
+            copyrightOwnerField.placeholder = '请输入事业单位全称';
+            break;
+        case '事业单位联合个人':
+            copyrightOwnerField.placeholder = '请输入事业单位名称和个人姓名';
+            break;
+        case '自然人联合':
+            copyrightOwnerField.placeholder = '请输入所有自然人姓名';
+            break;
+        default:
+            copyrightOwnerField.placeholder = '请输入著作权人姓名或单位名称';
+    }
+});
+</script>
+{% endblock %}

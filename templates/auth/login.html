@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-header text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-sign-in-alt"></i> 用户登录
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST">
+                        <!-- 用户类型选择 -->
+                        <div class="mb-3">
+                            <label class="form-label">登录身份</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="user_type" id="user_type_user" value="user" checked>
+                                <label class="btn btn-outline-primary" for="user_type_user">
+                                    <i class="fas fa-user"></i> 普通用户
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="user_type" id="user_type_staff" value="staff">
+                                <label class="btn btn-outline-primary" for="user_type_staff">
+                                    <i class="fas fa-briefcase"></i> 员工
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- 邮箱 -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">邮箱地址</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       placeholder="请输入邮箱地址" required>
+                            </div>
+                        </div>
+                        
+                        <!-- 密码 -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       placeholder="请输入密码" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 记住我 -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">记住登录状态</label>
+                        </div>
+                        
+                        <!-- 登录按钮 -->
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> 登录
+                            </button>
+                        </div>
+                        
+                        <!-- 其他选项 -->
+                        <div class="text-center">
+                            <p class="mb-0">
+                                还没有账户？ 
+                                <a href="{{ url_for('auth.register') }}" class="text-decoration-none">立即注册</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 登录说明 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-info"></i> 登录说明
+                    </h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li><strong>普通用户：</strong> 可申请软件著作权登记项目，查看项目进度</li>
+                        <li><strong>员工：</strong> 公司内部员工，可管理和执行项目</li>
+                        <li>如有问题，请联系管理员：admin@yiqichuang.com</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 切换密码显示/隐藏
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordInput = document.getElementById('password');
+        const icon = this.querySelector('i');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
+    
+    // 用户类型切换时的UI反馈
+    document.querySelectorAll('input[name="user_type"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const userTypeText = this.value === 'user' ? '普通用户' : '员工';
+            document.querySelector('.card-header h4').innerHTML = 
+                '<i class="fas fa-sign-in-alt"></i> ' + userTypeText + '登录';
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}用户中心 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-3">
+            <div class="sidebar p-3">
+                <h5 class="mb-3">
+                    <i class="fas fa-user"></i> 用户中心
+                </h5>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="{{ url_for('user.dashboard') }}">
+                        <i class="fas fa-tachometer-alt"></i> 仪表板
+                    </a>
+                    <a class="nav-link" href="{{ url_for('user.apply_project') }}">
+                        <i class="fas fa-plus"></i> 申请项目
+                    </a>
+                    <a class="nav-link" href="{{ url_for('user.profile') }}">
+                        <i class="fas fa-user-edit"></i> 个人资料
+                    </a>
+                    <a class="nav-link" href="{{ url_for('main.messages') }}">
+                        <i class="fas fa-comments"></i> 我的留言
+                    </a>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- 主要内容 -->
+        <div class="col-md-9">
+            <!-- 欢迎信息 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">
+                                <i class="fas fa-user-circle"></i> 欢迎，{{ current_user.name }}
+                            </h4>
+                            <p class="card-text text-muted">
+                                感谢您选择我们的服务，您可以在这里管理您的项目申请和查看进度
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.total_projects }}</h5>
+                                    <p class="card-text">总项目数</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-project-diagram fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.pending_projects }}</h5>
+                                    <p class="card-text">进行中项目</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card text-white bg-success">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.completed_projects }}</h5>
+                                    <p class="card-text">已完成项目</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="card text-white bg-info">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">{{ stats.archived_projects }}</h5>
+                                    <p class="card-text">已归档项目</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-archive fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 我的项目 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-list"></i> 我的项目
+                            </h6>
+                            <a href="{{ url_for('user.apply_project') }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus"></i> 申请新项目
+                            </a>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if projects %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>项目名称</th>
+                                            <th>项目类型</th>
+                                            <th>当前状态</th>
+                                            <th>申请时间</th>
+                                            <th>优先级</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for project in projects %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ project.project_name }}</strong>
+                                                {% if project.serial_number %}
+                                                <br><small class="text-muted">流水号：{{ project.serial_number }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark">{{ project.project_type }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if project.status == '待确认' %}bg-warning
+                                                    {% elif project.status == '已确认' %}bg-primary
+                                                    {% elif project.status == '已立项' %}bg-info
+                                                    {% elif project.status == '执行中' %}bg-warning
+                                                    {% elif project.status == '已完成' %}bg-success
+                                                    {% elif project.status == '证书完成' %}bg-success
+                                                    {% elif project.status == '已归档' %}bg-secondary
+                                                    {% else %}bg-secondary
+                                                    {% endif %}">
+                                                    {{ project.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ project.apply_time.strftime('%Y-%m-%d') if project.apply_time else '未知' }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if project.priority == '快速' %}bg-danger
+                                                    {% elif project.priority == '加急' %}bg-warning
+                                                    {% else %}bg-info
+                                                    {% endif %}">
+                                                    {{ project.priority }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('user.project_detail', project_id=project.id) }}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i> 详情
+                                                    </a>
+                                                    <a href="{{ url_for('main.project_status', project_id=project.id) }}" 
+                                                       class="btn btn-sm btn-outline-info">
+                                                        <i class="fas fa-chart-line"></i> 进度
+                                                    </a>
+                                                    {% if project.status == '待确认' %}
+                                                    <a href="{{ url_for('user.edit_project', project_id=project.id) }}" 
+                                                       class="btn btn-sm btn-outline-secondary">
+                                                        <i class="fas fa-edit"></i> 编辑
+                                                    </a>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="p-4 text-center text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <h6>暂无项目申请</h6>
+                                <p>您还没有申请任何项目，点击下方按钮开始申请</p>
+                                <a href="{{ url_for('user.apply_project') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> 申请项目
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 最近消息 -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-bell"></i> 最近消息
+                            </h6>
+                            <a href="{{ url_for('main.messages') }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-comments"></i> 查看全部
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            {% if recent_messages %}
+                            <div class="list-group list-group-flush">
+                                {% for message in recent_messages %}
+                                <div class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-bold">
+                                            {% if message.staff %}
+                                                <i class="fas fa-user-tie text-primary"></i> {{ message.staff.name }} (员工)
+                                            {% else %}
+                                                <i class="fas fa-user"></i> 系统消息
+                                            {% endif %}
+                                        </div>
+                                        <p class="mb-1">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
+                                        <small class="text-muted">{{ message.create_time.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    {% if not message.is_read %}
+                                    <span class="badge bg-primary rounded-pill">新</span>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center text-muted">
+                                <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                                <p>暂无消息</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

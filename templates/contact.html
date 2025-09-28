@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}联系我们 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<!-- 页面头部 -->
+<section class="hero-section">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-5 fw-bold mb-4">联系我们</h1>
+            <p class="lead">随时为您提供专业的知识产权保护服务</p>
+        </div>
+    </div>
+</section>
+
+<!-- 联系信息 -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <!-- 联系方式 -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-address-book"></i> 联系方式
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="contact-item mb-4">
+                            <div class="d-flex align-items-center">
+                                <div class="contact-icon me-3">
+                                    <i class="fas fa-building fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">公司名称</h6>
+                                    <p class="mb-0 text-muted">{{ contact.company }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-item mb-4">
+                            <div class="d-flex align-items-center">
+                                <div class="contact-icon me-3">
+                                    <i class="fas fa-map-marker-alt fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">公司地址</h6>
+                                    <p class="mb-0 text-muted">{{ contact.address }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-item mb-4">
+                            <div class="d-flex align-items-center">
+                                <div class="contact-icon me-3">
+                                    <i class="fas fa-phone fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">联系电话</h6>
+                                    <p class="mb-0 text-muted">
+                                        <a href="tel:{{ contact.phone }}" class="text-decoration-none">
+                                            {{ contact.phone }}
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-item mb-4">
+                            <div class="d-flex align-items-center">
+                                <div class="contact-icon me-3">
+                                    <i class="fas fa-envelope fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">电子邮箱</h6>
+                                    <p class="mb-0 text-muted">
+                                        <a href="mailto:{{ contact.email }}" class="text-decoration-none">
+                                            {{ contact.email }}
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-item">
+                            <div class="d-flex align-items-center">
+                                <div class="contact-icon me-3">
+                                    <i class="fas fa-clock fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">营业时间</h6>
+                                    <p class="mb-0 text-muted">{{ contact.business_hours }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 快速联系表单 -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-paper-plane"></i> 快速咨询
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        {% if current_user.is_authenticated %}
+                        <form method="POST" action="{{ url_for('main.messages') }}">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">姓名</label>
+                                <input type="text" class="form-control" id="name" value="{{ current_user.name }}" readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">邮箱</label>
+                                <input type="email" class="form-control" id="email" value="{{ current_user.email }}" readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="subject" class="form-label">咨询主题</label>
+                                <select class="form-select" id="subject">
+                                    <option value="">请选择咨询主题</option>
+                                    <option value="软件著作权登记">软件著作权登记</option>
+                                    <option value="专利申请">专利申请</option>
+                                    <option value="论文发表">论文发表</option>
+                                    <option value="价格咨询">价格咨询</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="content" class="form-label">咨询内容</label>
+                                <textarea class="form-control" id="content" name="content" rows="5" 
+                                         placeholder="请详细描述您的需求或问题..." required></textarea>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> 发送咨询
+                                </button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-user-lock fa-3x text-muted mb-3"></i>
+                            <h6>请先登录</h6>
+                            <p class="text-muted">登录后可以直接发送咨询信息</p>
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt"></i> 立即登录
+                            </a>
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary ms-2">
+                                <i class="fas fa-user-plus"></i> 注册账户
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 服务特色 -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">为什么选择我们？</h2>
+            <p class="text-muted">专业、高效、可靠的服务保障</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="service-feature">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-award fa-3x text-primary"></i>
+                    </div>
+                    <h6>专业团队</h6>
+                    <p class="text-muted small">
+                        拥有丰富经验的专业团队，
+                        深度了解医疗行业需求
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="service-feature">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-rocket fa-3x text-primary"></i>
+                    </div>
+                    <h6>高效服务</h6>
+                    <p class="text-muted small">
+                        标准化流程管理，
+                        提供快速高效的服务体验
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="service-feature">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-shield-check fa-3x text-primary"></i>
+                    </div>
+                    <h6>安全保障</h6>
+                    <p class="text-muted small">
+                        严格保护客户信息安全，
+                        确保知识产权不泄露
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3 text-center">
+                <div class="service-feature">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-headset fa-3x text-primary"></i>
+                    </div>
+                    <h6>全程跟踪</h6>
+                    <p class="text-muted small">
+                        提供项目全程跟踪服务，
+                        随时了解项目进展情况
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 常见问题 -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">常见问题</h2>
+            <p class="text-muted">为您解答常见的疑问</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq1">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse1">
+                                软件著作权登记需要多长时间？
+                            </button>
+                        </h2>
+                        <div id="collapse1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                软件著作权登记的时间取决于您选择的服务类型：
+                                <ul class="mt-2">
+                                    <li><strong>普通服务：</strong>30-45个工作日</li>
+                                    <li><strong>加急服务：</strong>15-20个工作日</li>
+                                    <li><strong>快速服务：</strong>5-10个工作日</li>
+                                </ul>
+                                具体时间可能因国家版权保护中心的审核进度而有所调整。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq2">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse2">
+                                需要准备哪些材料？
+                            </button>
+                        </h2>
+                        <div id="collapse2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                根据申请人类型，需要准备的材料有所不同：
+                                <ul class="mt-2">
+                                    <li><strong>个人申请：</strong>身份证复印件、软件源代码、软件说明书</li>
+                                    <li><strong>企业申请：</strong>营业执照、软件源代码、软件说明书</li>
+                                    <li><strong>事业单位：</strong>统一社会信用代码证书、软件源代码、软件说明书</li>
+                                    <li><strong>合作开发：</strong>各方证件、合作协议、软件相关材料</li>
+                                </ul>
+                                我们会为您提供详细的材料清单和模板。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq3">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse3">
+                                软件开发服务包含哪些内容？
+                            </button>
+                        </h2>
+                        <div id="collapse3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                我们提供全流程的软件开发服务：
+                                <ul class="mt-2">
+                                    <li>需求分析和系统设计</li>
+                                    <li>软件编码和开发</li>
+                                    <li>系统测试和优化</li>
+                                    <li>部署和上线（如需要）</li>
+                                    <li>软件著作权登记申请</li>
+                                    <li>技术文档编写</li>
+                                </ul>
+                                具体服务内容会根据您的需求进行定制。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faq4">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse4">
+                                如何查看项目进度？
+                            </button>
+                        </h2>
+                        <div id="collapse4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                我们提供多种方式让您随时了解项目进度：
+                                <ul class="mt-2">
+                                    <li>登录我们的在线系统查看实时进度</li>
+                                    <li>通过邮件和短信接收进度通知</li>
+                                    <li>联系专属客服人员咨询</li>
+                                    <li>在线留言系统与项目团队沟通</li>
+                                </ul>
+                                我们承诺让您对项目进展了如指掌。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.contact-item {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s ease;
+}
+
+.contact-item:hover {
+    background-color: #f8f9fa;
+}
+
+.contact-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-radius: 50%;
+}
+
+.service-feature {
+    padding: 1.5rem;
+    height: 100%;
+}
+
+.feature-icon {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-radius: 50%;
+    margin: 0 auto;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--primary-color);
+    color: white;
+}
+</style>
+{% endblock %}
