@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block title %}员工论文管理面板{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('staff.business_dashboard') }}">工作台</a></li>
+                        <li class="breadcrumb-item active">论文管理</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">员工论文管理面板</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="待确认">待确认</h5>
+                            <h3 class="my-2 py-1 text-warning">{{ pending_papers|length }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-clock text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="已确认">已确认</h5>
+                            <h3 class="my-2 py-1 text-info">{{ confirmed_papers|length }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-check-circle text-info" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="进行中">进行中</h5>
+                            <h3 class="my-2 py-1 text-primary">{{ in_progress_papers|length }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-tasks text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="总项目">总项目</h5>
+                            <h3 class="my-2 py-1">{{ (pending_papers|length + confirmed_papers|length + in_progress_papers|length) }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-file-alt text-success" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 待确认项目 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">待确认项目</h4>
+                        <span class="badge bg-warning">{{ pending_papers|length }} 个项目</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>服务等级</th>
+                                    <th>申请人</th>
+                                    <th>申请时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paper in pending_papers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary rounded-circle me-3">
+                                                <i class="fas fa-file-alt text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="m-0 fw-normal">{{ paper.project_name }}</h5>
+                                                <p class="mb-0 text-muted">{{ paper.paper_title or '未填写论文标题' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ paper.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-info text-info">{{ paper.service_level }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.applicant.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.apply_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-success" 
+                                                    onclick="confirmPaper({{ paper.id }})">
+                                                <i class="fas fa-check"></i> 确认
+                                            </button>
+                                            <a href="{{ url_for('paper.detail', paper_id=paper.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-file-alt fa-2x mb-2"></i>
+                                        <p>暂无待确认项目</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 已确认项目 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">已确认项目</h4>
+                        <span class="badge bg-info">{{ confirmed_papers|length }} 个项目</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>申请人</th>
+                                    <th>确认时间</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paper in confirmed_papers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-success rounded-circle me-3">
+                                                <i class="fas fa-file-alt text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="m-0 fw-normal">{{ paper.project_name }}</h5>
+                                                <p class="mb-0 text-muted">{{ paper.paper_title or '未填写论文标题' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ paper.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.applicant.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.confirm_time.strftime('%Y-%m-%d %H:%M') if paper.confirm_time else '未确认' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ paper.status }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-primary" 
+                                                    onclick="assignExecutor({{ paper.id }})">
+                                                <i class="fas fa-user-tie"></i> 分配执行者
+                                            </button>
+                                            <a href="{{ url_for('paper.detail', paper_id=paper.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                        <p>暂无已确认项目</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 进行中项目 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">进行中项目</h4>
+                        <span class="badge bg-primary">{{ in_progress_papers|length }} 个项目</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>申请人</th>
+                                    <th>执行者</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paper in in_progress_papers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-warning rounded-circle me-3">
+                                                <i class="fas fa-file-alt text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="m-0 fw-normal">{{ paper.project_name }}</h5>
+                                                <p class="mb-0 text-muted">{{ paper.paper_title or '未填写论文标题' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ paper.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.applicant.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.executor.name if paper.executor else '未分配' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ paper.status }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-warning" 
+                                                    onclick="updateStatus({{ paper.id }})">
+                                                <i class="fas fa-edit"></i> 更新状态
+                                            </button>
+                                            <a href="{{ url_for('paper.detail', paper_id=paper.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-tasks fa-2x mb-2"></i>
+                                        <p>暂无进行中项目</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 分配执行者模态框 -->
+<div class="modal fade" id="assignExecutorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">分配执行者</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignExecutorForm">
+                    <div class="mb-3">
+                        <label for="executor_id" class="form-label">选择执行者</label>
+                        <select class="form-select" id="executor_id" name="executor_id" required>
+                            <option value="">请选择执行者</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssignExecutor()">分配</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 更新状态模态框 -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">更新项目状态</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateStatusForm">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">选择新状态</label>
+                        <select class="form-select" id="status" name="status" required>
+                            <option value="">请选择状态</option>
+                            <option value="进行中">进行中</option>
+                            <option value="已投稿">已投稿</option>
+                            <option value="审稿中">审稿中</option>
+                            <option value="已录用">已录用</option>
+                            <option value="已发表">已发表</option>
+                            <option value="已完成">已完成</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitUpdateStatus()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPaperId = null;
+
+function confirmPaper(paperId) {
+    if (confirm('确定要确认这个项目吗？')) {
+        fetch(`/paper/${paperId}/confirm`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目确认成功');
+                location.reload();
+            } else {
+                alert('项目确认失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('项目确认失败，请重试');
+        });
+    }
+}
+
+function assignExecutor(paperId) {
+    currentPaperId = paperId;
+    
+    // 加载员工列表
+    fetch('/api/paper/staff_list', {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const select = document.getElementById('executor_id');
+            select.innerHTML = '<option value="">请选择执行者</option>';
+            
+            data.staff_list.forEach(staff => {
+                const option = document.createElement('option');
+                option.value = staff.id;
+                option.textContent = `${staff.name} (${staff.expertise_area || '无专业领域'})`;
+                select.appendChild(option);
+            });
+            
+            const modal = new bootstrap.Modal(document.getElementById('assignExecutorModal'));
+            modal.show();
+        } else {
+            alert('加载员工列表失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('加载员工列表失败，请重试');
+    });
+}
+
+function submitAssignExecutor() {
+    const executorId = document.getElementById('executor_id').value;
+    if (!executorId) {
+        alert('请选择执行者');
+        return;
+    }
+    
+    fetch(`/api/paper/${currentPaperId}/assign_executor`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({executor_id: executorId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('执行者分配成功');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('assignExecutorModal'));
+            modal.hide();
+            location.reload();
+        } else {
+            alert('执行者分配失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('执行者分配失败，请重试');
+    });
+}
+
+function updateStatus(paperId) {
+    currentPaperId = paperId;
+    const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+    modal.show();
+}
+
+function submitUpdateStatus() {
+    const status = document.getElementById('status').value;
+    if (!status) {
+        alert('请选择状态');
+        return;
+    }
+    
+    fetch(`/api/paper/${currentPaperId}/update_status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({status: status})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('状态更新成功');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
+            modal.hide();
+            location.reload();
+        } else {
+            alert('状态更新失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('状态更新失败，请重试');
+    });
+}
+</script>
+{% endblock %}

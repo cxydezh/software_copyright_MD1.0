@@ -29,13 +29,33 @@
                         <div class="mt-auto">
                             {% if current_user.is_authenticated %}
                                 {% if current_user.user_type is defined and current_user.user_type == 'user' %}
-                                <a href="{{ url_for('user.apply_project') }}" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> 申请服务
-                                </a>
+                                    {% if service.title == '论文指导和发表' %}
+                                    <a href="{{ url_for('paper.apply') }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> 申请服务
+                                    </a>
+                                    {% elif service.title == '专利申请和保护' %}
+                                    <a href="{{ url_for('patent.apply') }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> 申请服务
+                                    </a>
+                                    {% else %}
+                                    <a href="{{ url_for('user.apply_project') }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> 申请服务
+                                    </a>
+                                    {% endif %}
                                 {% elif current_user.user_type is defined and current_user.user_type == 'staff' %}
-                                <a href="{{ url_for('staff.apply_business') }}" class="btn btn-primary">
-                                    <i class="fas fa-user-tie"></i> 代客申请
-                                </a>
+                                    {% if service.title == '论文指导和发表' %}
+                                    <a href="{{ url_for('paper.staff_dashboard') }}" class="btn btn-primary">
+                                        <i class="fas fa-user-tie"></i> 管理服务
+                                    </a>
+                                    {% elif service.title == '专利申请和保护' %}
+                                    <a href="{{ url_for('patent.staff_dashboard') }}" class="btn btn-primary">
+                                        <i class="fas fa-user-tie"></i> 管理服务
+                                    </a>
+                                    {% else %}
+                                    <a href="{{ url_for('staff.apply_business') }}" class="btn btn-primary">
+                                        <i class="fas fa-user-tie"></i> 代客申请
+                                    </a>
+                                    {% endif %}
                                 {% endif %}
                             {% else %}
                             <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">

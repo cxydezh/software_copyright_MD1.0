@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}编辑专利项目 - {{ patent.project_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('patent.index') }}">专利申请</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('patent.detail', patent_id=patent.id) }}">{{ patent.project_name }}</a></li>
+                        <li class="breadcrumb-item active">编辑</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">编辑专利项目</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">编辑项目信息</h4>
+                    <p class="text-muted">修改项目的基本信息，注意：项目开始执行后无法编辑。</p>
+
+                    <form method="POST" id="patentEditForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="project_name" class="form-label">项目名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="project_name" name="project_name" 
+                                           value="{{ patent.project_name }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">项目类型</label>
+                                    <input type="text" class="form-control" value="{{ patent.project_type }}" readonly>
+                                    <small class="text-muted">项目类型不可修改</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">申请人类型</label>
+                                    <input type="text" class="form-control" value="{{ patent.applicant_type }}" readonly>
+                                    <small class="text-muted">申请人类型不可修改</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">申请领域</label>
+                                    <input type="text" class="form-control" value="{{ patent.application_field }}" readonly>
+                                    <small class="text-muted">申请领域不可修改</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="invention_title" class="form-label">发明名称</label>
+                            <input type="text" class="form-control" id="invention_title" name="invention_title" 
+                                   value="{{ patent.invention_title or '' }}" placeholder="请输入发明名称">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="technical_field" class="form-label">技术领域</label>
+                            <input type="text" class="form-control" id="technical_field" name="technical_field" 
+                                   value="{{ patent.technical_field or '' }}" placeholder="如：医疗器械、生物医学工程等">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="application_number" class="form-label">申请号</label>
+                                    <input type="text" class="form-control" id="application_number" name="application_number" 
+                                           value="{{ patent.application_number or '' }}" placeholder="如：202310123456.7">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="publication_number" class="form-label">公开号</label>
+                                    <input type="text" class="form-control" id="publication_number" name="publication_number" 
+                                           value="{{ patent.publication_number or '' }}" placeholder="如：CN110123456A">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="patent_number" class="form-label">专利号</label>
+                                    <input type="text" class="form-control" id="patent_number" name="patent_number" 
+                                           value="{{ patent.patent_number or '' }}" placeholder="如：ZL202310123456.7">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="annual_fee" class="form-label">年费</label>
+                                    <input type="number" class="form-control" id="annual_fee" name="annual_fee" 
+                                           value="{{ patent.annual_fee or '' }}" placeholder="年费金额" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">备注信息</label>
+                            <textarea class="form-control" id="remarks" name="remarks" rows="4" 
+                                      placeholder="请详细描述您的发明内容、技术特点、应用领域等">{{ patent.remarks or '' }}</textarea>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{{ url_for('patent.detail', patent_id=patent.id) }}" class="btn btn-light me-2">
+                                <i class="fas fa-arrow-left"></i> 返回详情
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 保存修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">项目状态</h4>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">当前状态</label>
+                        <div>
+                            {% if patent.status == '待确认' %}
+                                <span class="badge bg-warning fs-6">{{ patent.status }}</span>
+                            {% elif patent.status in ['已确认', '准备中', '已递交', '审查中'] %}
+                                <span class="badge bg-info fs-6">{{ patent.status }}</span>
+                            {% elif patent.status in ['已授权', '维持中', '已完成'] %}
+                                <span class="badge bg-success fs-6">{{ patent.status }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">{{ patent.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">申请时间</label>
+                        <p class="text-muted">{{ patent.apply_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+
+                    {% if patent.confirm_time %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">确认时间</label>
+                        <p class="text-muted">{{ patent.confirm_time.strftime('%Y-%m-%d %H:%M') if patent.confirm_time else '未确认' }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if patent.file_time %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">递交时间</label>
+                        <p class="text-muted">{{ patent.file_time.strftime('%Y-%m-%d %H:%M') if patent.file_time else '未递交' }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if patent.publish_time %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">公开时间</label>
+                        <p class="text-muted">{{ patent.publish_time.strftime('%Y-%m-%d %H:%M') if patent.publish_time else '未公开' }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if patent.grant_time %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">授权时间</label>
+                        <p class="text-muted">{{ patent.grant_time.strftime('%Y-%m-%d %H:%M') if patent.grant_time else '未授权' }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">编辑说明</h6>
+                        <ul class="mb-0 small">
+                            <li>可以编辑发明名称、技术领域、申请号、公开号、专利号、年费等信息</li>
+                            <li>项目类型、申请人类型、申请领域不可修改</li>
+                            <li>项目开始执行后无法编辑</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 表单验证
+    $('#patentEditForm').on('submit', function(e) {
+        var projectName = $('#project_name').val().trim();
+        
+        if (!projectName) {
+            e.preventDefault();
+            alert('项目名称不能为空');
+            $('#project_name').focus();
+            return false;
+        }
+    });
+
+    // 实时验证
+    $('#project_name').on('blur', function() {
+        if ($(this).val().trim()) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+
+    // 申请号格式验证
+    $('#application_number').on('blur', function() {
+        var value = $(this).val().trim();
+        if (value && !/^\d{4}\d{6}\.\d$/.test(value)) {
+            $(this).addClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+            $(this).after('<div class="invalid-feedback">申请号格式不正确，应为：年份+流水号+校验位</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+
+    // 公开号格式验证
+    $('#publication_number').on('blur', function() {
+        var value = $(this).val().trim();
+        if (value && !/^CN\d{9}[A-Z]$/.test(value)) {
+            $(this).addClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+            $(this).after('<div class="invalid-feedback">公开号格式不正确，应为：CN+流水号+字母</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+
+    // 专利号格式验证
+    $('#patent_number').on('blur', function() {
+        var value = $(this).val().trim();
+        if (value && !/^ZL\d{4}\d{6}\.\d$/.test(value)) {
+            $(this).addClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+            $(this).after('<div class="invalid-feedback">专利号格式不正确，应为：ZL+年份+流水号+校验位</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}申请论文指导{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('paper.index') }}">论文指导</a></li>
+                        <li class="breadcrumb-item active">申请论文指导</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">申请论文指导</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">论文指导申请表单</h4>
+                    <p class="text-muted">请填写以下信息，我们将根据您的需求为您匹配合适的专家进行论文指导。</p>
+
+                    <form method="POST" id="paperApplyForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="project_name" class="form-label">项目名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="project_name" name="project_name" 
+                                           placeholder="请输入项目名称" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="project_type" class="form-label">项目类型 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="project_type" name="project_type" required>
+                                        <option value="">请选择项目类型</option>
+                                        <option value="论文指导">论文指导</option>
+                                        <option value="论文发表">论文发表</option>
+                                        <option value="学术咨询">学术咨询</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="service_level" class="form-label">服务等级 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="service_level" name="service_level" required>
+                                        <option value="">请选择服务等级</option>
+                                        <option value="基础服务">基础服务 - 论文格式规范、投稿指导</option>
+                                        <option value="标准服务">标准服务 - 内容修改、期刊推荐、全程跟踪</option>
+                                        <option value="高级服务">高级服务 - 深度指导、专家审稿、快速发表</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="applicant_type" class="form-label">申请人类型 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="applicant_type" name="applicant_type" required>
+                                        <option value="">请选择申请人类型</option>
+                                        <option value="个人学者">个人学者 - 高校教师、研究人员、博士生</option>
+                                        <option value="医疗机构">医疗机构 - 医院、医学研究所、医学院</option>
+                                        <option value="企业研发">企业研发 - 医疗设备公司、制药企业研发部门</option>
+                                        <option value="联合申请">联合申请 - 多机构合作项目</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="paper_title" class="form-label">论文标题</label>
+                            <input type="text" class="form-control" id="paper_title" name="paper_title" 
+                                   placeholder="请输入论文标题（如已有初稿）">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="research_field" class="form-label">研究领域</label>
+                                    <input type="text" class="form-control" id="research_field" name="research_field" 
+                                           placeholder="如：医学影像、生物医学工程、临床医学等">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="target_journal" class="form-label">目标期刊</label>
+                                    <input type="text" class="form-control" id="target_journal" name="target_journal" 
+                                           placeholder="如：Nature、Science、NEJM等">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">备注信息</label>
+                            <textarea class="form-control" id="remarks" name="remarks" rows="4" 
+                                      placeholder="请详细描述您的需求、期望的指导内容、时间要求等"></textarea>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{{ url_for('paper.index') }}" class="btn btn-light me-2">
+                                <i class="fas fa-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> 提交申请
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">服务说明</h4>
+                    
+                    <div class="mb-4">
+                        <h5 class="text-primary">基础服务</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li><i class="fas fa-check text-success me-2"></i>论文格式规范指导</li>
+                            <li><i class="fas fa-check text-success me-2"></i>期刊投稿流程指导</li>
+                            <li><i class="fas fa-check text-success me-2"></i>基础写作技巧培训</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="text-info">标准服务</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li><i class="fas fa-check text-success me-2"></i>论文内容修改润色</li>
+                            <li><i class="fas fa-check text-success me-2"></i>期刊推荐与匹配</li>
+                            <li><i class="fas fa-check text-success me-2"></i>全程跟踪服务</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="text-warning">高级服务</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li><i class="fas fa-check text-success me-2"></i>深度学术指导</li>
+                            <li><i class="fas fa-check text-success me-2"></i>专家审稿服务</li>
+                            <li><i class="fas fa-check text-success me-2"></i>快速发表通道</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">注意事项</h6>
+                        <ul class="mb-0 small">
+                            <li>提交申请后，我们将在1-2个工作日内与您联系</li>
+                            <li>请确保填写的信息真实有效</li>
+                            <li>如有疑问，请联系客服：188 3826 9405</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 表单验证
+    $('#paperApplyForm').on('submit', function(e) {
+        var isValid = true;
+        var requiredFields = ['project_name', 'project_type', 'service_level', 'applicant_type'];
+        
+        requiredFields.forEach(function(field) {
+            var $field = $('#' + field);
+            if (!$field.val()) {
+                $field.addClass('is-invalid');
+                isValid = false;
+            } else {
+                $field.removeClass('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('请填写所有必填字段');
+        }
+    });
+
+    // 实时验证
+    $('input[required], select[required]').on('blur', function() {
+        if ($(this).val()) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime
 import sys
@@ -7,7 +7,7 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database.models import db, Project, Message
+from database.models import db, Project, Message, ProcessLog
 
 user_bp = Blueprint('user', __name__)
 
@@ -114,6 +114,49 @@ def project_detail(project_id):
     return render_template('user/project_detail.html', 
                          project=project,
                          messages=project_messages)
+
+@user_bp.route('/project/<int:project_id>/resubmit', methods=['POST'])
+@login_required
+def resubmit_project(project_id):
+    """用户完善信息后重新申请（状态回到待确认）"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'user':
+        return jsonify({'success': False, 'message': '权限不足'})
+    project = Project.query.get_or_404(project_id)
+    if project.applicant_id != current_user.id:
+        return jsonify({'success': False, 'message': '无权操作该项目'})
+    try:
+        prev_status = project.status
+        project.status = '待确认'
+        project.confirm_time = None
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='user_resubmit', actor_id=current_user.id, actor_role='user',
+            from_status=prev_status, to_status=project.status, note='用户重新申请'))
+        db.session.commit()
+        return jsonify({'success': True, 'message': '已重新提交，等待业务员确认'})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '提交失败，请重试'})
+
+@user_bp.route('/project/<int:project_id>/cancel', methods=['POST'])
+@login_required
+def cancel_project(project_id):
+    """用户取消申请（保持当前状态，仅记录流程）"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'user':
+        return jsonify({'success': False, 'message': '权限不足'})
+    project = Project.query.get_or_404(project_id)
+    if project.applicant_id != current_user.id:
+        return jsonify({'success': False, 'message': '无权操作该项目'})
+    try:
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='user_cancel', actor_id=current_user.id, actor_role='user',
+            from_status=project.status, to_status=project.status, note='用户取消申请'))
+        db.session.commit()
+        return jsonify({'success': True, 'message': '已取消申请'})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
 
 @user_bp.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required

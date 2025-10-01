@@ -6,7 +6,7 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database.models import db, Project, Message
+from database.models import db, Project, Message, ProcessLog
 
 main_bp = Blueprint('main', __name__)
 
@@ -66,8 +66,8 @@ def contact():
     contact_info = {
         'company': '郑州医企创医疗科技有限公司',
         'address': '郑州市高新区科学大道',
-        'phone': '0371-12345678',
-        'email': 'contact@yiqichuang.com',
+        'phone': '188 3826 9405',
+        'email': 'nngde@qq.com',
         'business_hours': '周一至周五 9:00-18:00'
     }
     return render_template('contact.html', contact=contact_info)
@@ -120,15 +120,19 @@ def project_status(project_id):
             flash('您没有权限查看此项目', 'danger')
             return redirect(url_for('staff.business_dashboard'))
     
-    # 项目状态流程
+    # 项目状态流程（已结清作为独立标记，不在流程中）
     status_flow = [
         '待确认', '已确认', '已立项', '执行中', '已完成', 
-        '已上传', '已获取流水号', '证书完成', '已结清', '已归档'
+        '已上传', '已获取流水号', '证书完成', '已归档'
     ]
     
     current_step = status_flow.index(project.status) if project.status in status_flow else 0
+    progress_percentage = round(((current_step + 1) / len(status_flow)) * 100, 0)
     
+    process_logs = ProcessLog.query.filter_by(project_type='software', project_id=project.id).order_by(ProcessLog.created_at.asc()).all()
     return render_template('project_status.html', 
                          project=project, 
                          status_flow=status_flow, 
-                         current_step=current_step)
+                         current_step=current_step,
+                         progress_percentage=progress_percentage,
+                         process_logs=process_logs)

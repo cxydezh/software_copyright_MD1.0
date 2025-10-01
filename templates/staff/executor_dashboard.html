@@ -19,9 +19,6 @@
                         <i class="fas fa-tasks"></i> 业务管理
                     </a>
                     <a class="nav-link" href="#">
-                        <i class="fas fa-folder"></i> 文件管理
-                    </a>
-                    <a class="nav-link" href="#">
                         <i class="fas fa-download"></i> 下载桌面工具
                     </a>
                 </nav>
@@ -70,7 +67,7 @@
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <h5 class="card-title">{{ stats.available_count }}</h5>
-                                    <p class="card-text">可接受项目</p>
+                                    <p class="card-text">可立项项目</p>
                                 </div>
                                 <div class="align-self-center">
                                     <i class="fas fa-hand-paper fa-2x"></i>
@@ -179,18 +176,18 @@
                         </div>
                         {% if assigned_projects|length > 5 %}
                         <div class="card-footer text-center">
-                            <a href="#" class="btn btn-sm btn-primary">查看全部</a>
+                            <a href="{{ url_for('staff.assigned_projects') }}" class="btn btn-sm btn-primary">查看全部</a>
                         </div>
                         {% endif %}
                     </div>
                 </div>
                 
-                <!-- 可接受的项目 -->
+                <!-- 可立项的项目 -->
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
                             <h6 class="mb-0">
-                                <i class="fas fa-hand-paper"></i> 可接受项目
+                                <i class="fas fa-hand-paper"></i> 可立项项目
                             </h6>
                         </div>
                         <div class="card-body p-0">
@@ -224,10 +221,16 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-success" 
-                                                        onclick="takeProject({{ project.id }})">
-                                                    <i class="fas fa-hand-paper"></i>
-                                                </button>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <button class="btn btn-success" 
+                                                            onclick="approveProject('{{ project.id }}')">
+                                                        <i class="fas fa-hand-paper"></i>
+                                                    </button>
+                                                    <button class="btn btn-warning" 
+                                                            onclick="rejectToBusiness('{{ project.id }}')">
+                                                        <i class="fas fa-undo"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -237,13 +240,81 @@
                             {% else %}
                             <div class="p-3 text-center text-muted">
                                 <i class="fas fa-check-circle fa-2x mb-2"></i>
-                                <p>暂无可接受的项目</p>
+                                <p>暂无可立项的项目</p>
                             </div>
                             {% endif %}
                         </div>
                         {% if available_projects|length > 5 %}
                         <div class="card-footer text-center">
-                            <a href="#" class="btn btn-sm btn-warning">查看全部</a>
+                            <a href="{{ url_for('staff.available_projects') }}" class="btn btn-sm btn-warning">查看全部</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 已立项待执行的项目（无执行者） -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-flag-checkered"></i> 已立项待执行
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if approved_projects %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>项目名称</th>
+                                            <th>类型</th>
+                                            <th>优先级</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for project in approved_projects[:10] %}
+                                        <tr>
+                                            <td>
+                                                <small>{{ project.project_name[:40] }}{% if project.project_name|length > 40 %}...{% endif %}</small>
+                                            </td>
+                                            <td><small class="text-muted">{{ project.project_type }}</small></td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if project.priority == '快速' %}bg-danger
+                                                    {% elif project.priority == '加急' %}bg-warning
+                                                    {% else %}bg-info
+                                                    {% endif %}">
+                                                    {{ project.priority }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="{{ url_for('staff.project_detail', project_id=project.id) }}" class="btn btn-outline-primary">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <button class="btn btn-success" onclick="takeProject('{{ project.id }}')">
+                                                        <i class="fas fa-play"></i> 执行
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="p-3 text-center text-muted">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <p>暂无已立项待执行的项目</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if approved_projects|length > 5 %}
+                        <div class="card-footer text-center">
+                            <a href="{{ url_for('staff.approved_projects') }}" class="btn btn-sm btn-warning">查看全部</a>
                         </div>
                         {% endif %}
                     </div>
@@ -274,18 +345,6 @@
                                         <small>版权保护中心</small>
                                     </a>
                                 </div>
-                                <div class="col-md-3">
-                                    <a href="#" class="btn btn-outline-success w-100 mb-2">
-                                        <i class="fas fa-file-alt"></i><br>
-                                        <small>模板管理</small>
-                                    </a>
-                                </div>
-                                <div class="col-md-3">
-                                    <a href="#" class="btn btn-outline-warning w-100 mb-2">
-                                        <i class="fas fa-sync"></i><br>
-                                        <small>同步数据</small>
-                                    </a>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -298,8 +357,31 @@
 
 {% block scripts %}
 <script>
+function approveProject(projectId) {
+    if (confirm('确定要立项这个项目吗？')) {
+        fetch(`/staff/project/${projectId}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目立项成功！');
+                location.reload();
+            } else {
+                alert('立项项目失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
 function takeProject(projectId) {
-    if (confirm('确定要接受这个项目吗？')) {
+    if (confirm('确定要开始执行这个项目吗？')) {
         fetch(`/staff/project/${projectId}/take`, {
             method: 'POST',
             headers: {
@@ -309,10 +391,10 @@ function takeProject(projectId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('项目接受成功！');
+                alert('项目开始执行成功！');
                 location.reload();
             } else {
-                alert('接受项目失败：' + data.message);
+                alert('开始执行项目失败：' + data.message);
             }
         })
         .catch(error => {
@@ -320,6 +402,20 @@ function takeProject(projectId) {
             alert('操作失败，请重试');
         });
     }
+}
+
+function rejectToBusiness(projectId){
+    const reason = prompt('请输入退回业务员的原因：');
+    if (reason === null) return;
+    if (!reason.trim()) { alert('请输入退回原因'); return; }
+    if (!confirm('确定要将该项目退回给业务员吗？')) return;
+    fetch(`/staff/project/${projectId}/reject_to_business`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reject_reason: reason })
+    }).then(r=>r.json()).then(d=>{
+        if (d.success) { alert('已退回给业务员'); location.reload(); }
+        else { alert('操作失败：' + d.message); }
+    }).catch(()=>alert('操作失败，请重试'));
 }
 </script>
 {% endblock %}

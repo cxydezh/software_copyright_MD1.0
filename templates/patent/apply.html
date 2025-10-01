@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}申请专利保护{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('patent.index') }}">专利申请</a></li>
+                        <li class="breadcrumb-item active">申请专利保护</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">申请专利保护</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">专利申请表单</h4>
+                    <p class="text-muted">请填写以下信息，我们将为您提供专业的专利申请和保护服务。</p>
+
+                    <form method="POST" id="patentApplyForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="project_name" class="form-label">项目名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="project_name" name="project_name" 
+                                           placeholder="请输入项目名称" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="project_type" class="form-label">项目类型 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="project_type" name="project_type" required>
+                                        <option value="">请选择项目类型</option>
+                                        <option value="发明专利申请">发明专利申请</option>
+                                        <option value="实用新型申请">实用新型申请</option>
+                                        <option value="外观设计申请">外观设计申请</option>
+                                        <option value="国际申请">国际申请（PCT）</option>
+                                        <option value="专利保护">专利保护</option>
+                                        <option value="专利管理">专利管理</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="applicant_type" class="form-label">申请人类型 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="applicant_type" name="applicant_type" required>
+                                        <option value="">请选择申请人类型</option>
+                                        <option value="个人发明者">个人发明者 - 独立发明人</option>
+                                        <option value="企业申请">企业申请 - 公司法人申请</option>
+                                        <option value="科研院所">科研院所 - 高校、研究所</option>
+                                        <option value="联合申请">联合申请 - 多方合作申请</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="application_field" class="form-label">申请领域 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="application_field" name="application_field" required>
+                                        <option value="">请选择申请领域</option>
+                                        <option value="医疗设备">医疗设备 - 医疗器械、诊断设备</option>
+                                        <option value="生物医药">生物医药 - 药物研发、生物技术</option>
+                                        <option value="数字医疗">数字医疗 - 医疗软件、AI诊断</option>
+                                        <option value="其他领域">其他领域 - 相关技术领域</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="invention_title" class="form-label">发明名称</label>
+                            <input type="text" class="form-control" id="invention_title" name="invention_title" 
+                                   placeholder="请输入发明名称">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="technical_field" class="form-label">技术领域</label>
+                            <input type="text" class="form-control" id="technical_field" name="technical_field" 
+                                   placeholder="如：医疗器械、生物医学工程、人工智能等">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">备注信息</label>
+                            <textarea class="form-control" id="remarks" name="remarks" rows="4" 
+                                      placeholder="请详细描述您的技术方案、创新点、应用场景等"></textarea>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{{ url_for('patent.index') }}" class="btn btn-light me-2">
+                                <i class="fas fa-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> 提交申请
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">服务说明</h4>
+                    
+                    <div class="mb-4">
+                        <h5 class="text-primary">发明专利申请</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li><i class="fas fa-check text-success me-2"></i>技术方案分析</li>
+                            <li><i class="fas fa-check text-success me-2"></i>专利检索分析</li>
+                            <li><i class="fas fa-check text-success me-2"></i>申请文件撰写</li>
+                            <li><i class="fas fa-check text-success me-2"></i>审查意见答复</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="text-info">实用新型申请</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li><i class="fas fa-check text-success me-2"></i>产品结构分析</li>
+                            <li><i class="fas fa-check text-success me-2"></i>技术方案优化</li>
+                            <li><i class="fas fa-check text-success me-2"></i>申请文件准备</li>
+                            <li><i class="fas fa-check text-success me-2"></i>快速授权通道</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="text-warning">外观设计申请</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li><i class="fas fa-check text-success me-2"></i>设计要点分析</li>
+                            <li><i class="fas fa-check text-success me-2"></i>图片规范制作</li>
+                            <li><i class="fas fa-check text-success me-2"></i>申请文件撰写</li>
+                            <li><i class="fas fa-check text-success me-2"></i>快速审查通道</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="text-success">专利管理</h5>
+                        <ul class="list-unstyled text-muted">
+                            <li><i class="fas fa-check text-success me-2"></i>年费管理</li>
+                            <li><i class="fas fa-check text-success me-2"></i>专利转化</li>
+                            <li><i class="fas fa-check text-success me-2"></i>价值评估</li>
+                            <li><i class="fas fa-check text-success me-2"></i>组合优化</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">注意事项</h6>
+                        <ul class="mb-0 small">
+                            <li>提交申请后，我们将在1-2个工作日内与您联系</li>
+                            <li>请确保技术方案的保密性</li>
+                            <li>如有疑问，请联系客服：188 3826 9405</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 表单验证
+    $('#patentApplyForm').on('submit', function(e) {
+        var isValid = true;
+        var requiredFields = ['project_name', 'project_type', 'applicant_type', 'application_field'];
+        
+        requiredFields.forEach(function(field) {
+            var $field = $('#' + field);
+            if (!$field.val()) {
+                $field.addClass('is-invalid');
+                isValid = false;
+            } else {
+                $field.removeClass('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('请填写所有必填字段');
+        }
+    });
+
+    // 实时验证
+    $('input[required], select[required]').on('blur', function() {
+        if ($(this).val()) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+});
+</script>
+{% endblock %}

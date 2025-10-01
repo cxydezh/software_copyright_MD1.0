@@ -20,8 +20,8 @@
                         <i class="fas fa-cogs"></i> 执行者工作台
                     </a>
                     {% endif %}
-                    <a class="nav-link" href="#">
-                        <i class="fas fa-chart-bar"></i> 统计报表
+                    <a class="nav-link" href="{{ url_for('reports.index') }}">
+                        <i class="fas fa-chart-bar"></i> 数据报表
                     </a>
                 </nav>
             </div>
@@ -45,6 +45,32 @@
                 </div>
             </div>
             
+<!-- 驳回申请模态框（业务员） -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="fas fa-times-circle"></i> 驳回申请</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <small><i class="fas fa-exclamation-triangle"></i> 驳回后，用户需要根据意见修改后重新申请。</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">驳回原因：<span class="text-danger">*</span></label>
+                    <textarea id="rejectReason" class="form-control" rows="4" placeholder="请填写明确的修改意见"></textarea>
+                </div>
+                <input type="hidden" id="rejectProjectId" value="">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="submitReject()">确认驳回</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
             <!-- 统计卡片 -->
             <div class="row mb-4">
                 <div class="col-md-3">
@@ -164,8 +190,13 @@
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                     <button class="btn btn-sm btn-success" 
-                                                            onclick="confirmProject({{ project.id }})">
+                                                            onclick="confirmProject(this.dataset.projectId)" 
+                                                            data-project-id="{{ project.id }}" title="确认">
                                                         <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger"
+                                                            onclick="openRejectModal('{{ project.id }}')" title="驳回并给出修改意见">
+                                                        <i class="fas fa-times"></i>
                                                     </button>
                                                 </div>
                                             </td>
@@ -240,8 +271,9 @@
                                                        class="btn btn-sm btn-outline-primary">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    {% if project.status == '已确认' %}
-                                                    <button class="btn btn-sm btn-info" onclick="approveProject({{ project.id }})">
+                                                    {% if project.status == '已确认' and current_user.position is defined and current_user.position and current_user.position.can_approve %}
+                                                    <button class="btn btn-sm btn-info" onclick="approveProject(this.dataset.projectId)" 
+                                                            data-project-id="{{ project.id }}">
                                                         <i class="fas fa-arrow-right"></i> 立项
                                                     </button>
                                                     {% endif %}
@@ -295,28 +327,24 @@ function confirmProject(projectId) {
     }
 }
 
-function approveProject(projectId) {
-    if (confirm('确定要将此项目立项吗？立项后将进入执行队列。')) {
-        fetch(`/staff/project/${projectId}/approve`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('项目立项成功！');
-                location.reload();
-            } else {
-                alert('立项失败：' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('操作失败，请重试');
-        });
-    }
+function openRejectModal(projectId){
+    document.getElementById('rejectProjectId').value = projectId;
+    document.getElementById('rejectReason').value = '';
+    const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+    modal.show();
+}
+
+function submitReject(){
+    const projectId = document.getElementById('rejectProjectId').value;
+    const reason = document.getElementById('rejectReason').value.trim();
+    if(!reason){ alert('请输入驳回原因'); return; }
+    fetch(`/staff/project/${projectId}/reject`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reject_reason: reason })
+    }).then(r=>r.json()).then(d=>{
+        if(d.success){ alert('已驳回并通知用户'); location.reload(); }
+        else{ alert('操作失败：' + d.message); }
+    }).catch(()=>alert('操作失败，请重试'));
 }
 </script>
 {% endblock %}

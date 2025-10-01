@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}{{ patent.project_name }} - 专利项目详情{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('patent.index') }}">专利申请</a></li>
+                        <li class="breadcrumb-item active">{{ patent.project_name }}</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">{{ patent.project_name }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- 项目基本信息 -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">项目信息</h4>
+                        <div>
+                            {% if patent.status == '待确认' %}
+                                <span class="badge bg-warning fs-6">{{ patent.status }}</span>
+                            {% elif patent.status in ['已确认', '准备中', '已递交', '审查中'] %}
+                                <span class="badge bg-info fs-6">{{ patent.status }}</span>
+                            {% elif patent.status in ['已授权', '维持中', '已完成'] %}
+                                <span class="badge bg-success fs-6">{{ patent.status }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">{{ patent.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">项目类型</label>
+                                <p class="text-muted">{{ patent.project_type }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">申请领域</label>
+                                <p class="text-muted">{{ patent.application_field }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">申请人类型</label>
+                                <p class="text-muted">{{ patent.applicant_type }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">申请时间</label>
+                                <p class="text-muted">{{ patent.apply_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if patent.invention_title %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">发明名称</label>
+                        <p class="text-muted">{{ patent.invention_title }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if patent.technical_field %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">技术领域</label>
+                        <p class="text-muted">{{ patent.technical_field }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- 专利信息 -->
+                    <div class="row">
+                        {% if patent.application_number %}
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">申请号</label>
+                                <p class="text-muted">{{ patent.application_number }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if patent.publication_number %}
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">公开号</label>
+                                <p class="text-muted">{{ patent.publication_number }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if patent.patent_number %}
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">专利号</label>
+                                <p class="text-muted">{{ patent.patent_number }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if patent.remarks %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">备注信息</label>
+                        <p class="text-muted">{{ patent.remarks }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="text-end">
+                        {% if patent.status in ['待确认', '已确认'] %}
+                        <a href="{{ url_for('patent.edit', patent_id=patent.id) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit"></i> 编辑项目
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('patent.index') }}" class="btn btn-light">
+                            <i class="fas fa-arrow-left"></i> 返回列表
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 项目文件 -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">项目文件</h4>
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i class="fas fa-upload"></i> 上传文件
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>文件类型</th>
+                                    <th>文件大小</th>
+                                    <th>上传时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-file-alt text-primary me-2"></i>
+                                            <span>{{ file.file_name }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ file.file_type.upper() }}</span>
+                                    </td>
+                                    <td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td>
+                                    <td>{{ file.upload_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="#" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-download"></i> 下载
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="deleteFile({{ file.id }})">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-file-alt fa-2x mb-2"></i>
+                                        <p>暂无文件</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- 项目进度 -->
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">项目进度</h4>
+                    
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">项目申请</h6>
+                                <p class="timeline-text text-muted">{{ patent.apply_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+                        </div>
+
+                        {% if patent.confirm_time %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">项目确认</h6>
+                                <p class="timeline-text text-muted">{{ patent.confirm_time.strftime('%Y-%m-%d %H:%M') if patent.confirm_time else '未确认' }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if patent.file_time %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">递交申请</h6>
+                                <p class="timeline-text text-muted">{{ patent.file_time.strftime('%Y-%m-%d %H:%M') if patent.file_time else '未递交' }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if patent.publish_time %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-warning"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">专利公开</h6>
+                                <p class="timeline-text text-muted">{{ patent.publish_time.strftime('%Y-%m-%d %H:%M') if patent.publish_time else '未公开' }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if patent.grant_time %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">专利授权</h6>
+                                <p class="timeline-text text-muted">{{ patent.grant_time.strftime('%Y-%m-%d %H:%M') if patent.grant_time else '未授权' }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文件管理 -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">文件管理</h4>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i class="fas fa-upload"></i> 上传文件
+                        </button>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>文件类型</th>
+                                    <th>文件大小</th>
+                                    <th>分类</th>
+                                    <th>上传时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file-{{ file.file_type }} me-2"></i>
+                                        {{ file.file_name }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ file.file_type.upper() }}</span>
+                                    </td>
+                                    <td>{{ "%.2f"|format(file.file_size / 1024) }} KB</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ file.file_category }}</span>
+                                    </td>
+                                    <td>{{ file.upload_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            {% if file.file_type in ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'txt'] %}
+                                            <button class="btn btn-outline-info" onclick="previewFile({{ file.id }})" title="预览">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            {% endif %}
+                                            <button class="btn btn-outline-primary" onclick="downloadFile({{ file.id }})" title="下载">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteFile({{ file.id }})" title="删除">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">暂无文件</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 联系信息 -->
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">联系信息</h4>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">客服电话</h6>
+                        <p class="mb-0">188 3826 9405</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">客服邮箱</h6>
+                        <p class="mb-0">admin@yiqichuang.com</p>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <h6 class="text-muted">工作时间</h6>
+                        <p class="mb-0">周一至周五 9:00-18:00</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文件上传模态框 -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">上传文件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">选择文件</label>
+                        <input type="file" class="form-control" id="file" name="file" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="file_category" class="form-label">文件分类</label>
+                        <select class="form-select" id="file_category" name="file_category">
+                            <option value="申请材料">申请材料</option>
+                            <option value="技术文档">技术文档</option>
+                            <option value="证书文件">证书文件</option>
+                            <option value="其他文件">其他文件</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="uploadFile()">上传</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function uploadFile() {
+    var form = document.getElementById('uploadForm');
+    var formData = new FormData(form);
+    
+    fetch('{{ url_for("api_patent.upload_patent_file", patent_id=patent.id) }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('文件上传成功');
+            location.reload();
+        } else {
+            alert('文件上传失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('文件上传失败，请重试');
+    });
+}
+
+function deleteFile(fileId) {
+    if (confirm('确定要删除此文件吗？')) {
+        fetch('{{ url_for("api_patent.delete_patent_file", patent_id=patent.id, file_id=0) }}'.replace('0', fileId), {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('文件删除成功');
+                location.reload();
+            } else {
+                alert('文件删除失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('文件删除失败，请重试');
+        });
+    }
+}
+
+function downloadFile(fileId) {
+    window.open('{{ url_for("api_patent.download_patent_file", patent_id=patent.id, file_id=0) }}'.replace('0', fileId), '_blank');
+}
+
+function previewFile(fileId) {
+    window.open('{{ url_for("api_patent.preview_patent_file", patent_id=patent.id, file_id=0) }}'.replace('0', fileId), '_blank');
+}
+</script>
+{% endblock %}

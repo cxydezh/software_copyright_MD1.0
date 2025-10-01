@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block title %}员工专利管理面板{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('staff.business_dashboard') }}">工作台</a></li>
+                        <li class="breadcrumb-item active">专利管理</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">员工专利管理面板</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="待确认">待确认</h5>
+                            <h3 class="my-2 py-1 text-warning">{{ pending_patents|length }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-clock text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="已确认">已确认</h5>
+                            <h3 class="my-2 py-1 text-info">{{ confirmed_patents|length }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-check-circle text-info" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="进行中">进行中</h5>
+                            <h3 class="my-2 py-1 text-primary">{{ in_progress_patents|length }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-tasks text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="总项目">总项目</h5>
+                            <h3 class="my-2 py-1">{{ (pending_patents|length + confirmed_patents|length + in_progress_patents|length) }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-shield-alt text-success" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 待确认项目 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">待确认项目</h4>
+                        <span class="badge bg-warning">{{ pending_patents|length }} 个项目</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>申请领域</th>
+                                    <th>申请人</th>
+                                    <th>申请时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patent in pending_patents %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary rounded-circle me-3">
+                                                <i class="fas fa-shield-alt text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="m-0 fw-normal">{{ patent.project_name }}</h5>
+                                                <p class="mb-0 text-muted">{{ patent.invention_title or '未填写发明名称' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ patent.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-info text-info">{{ patent.application_field }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ patent.applicant.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ patent.apply_time.strftime('%Y-%m-%d %H:%M') }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-success" 
+                                                    onclick="confirmPatent({{ patent.id }})">
+                                                <i class="fas fa-check"></i> 确认
+                                            </button>
+                                            <a href="{{ url_for('patent.detail', patent_id=patent.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                                        <p>暂无待确认项目</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 已确认项目 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">已确认项目</h4>
+                        <span class="badge bg-info">{{ confirmed_patents|length }} 个项目</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>申请人</th>
+                                    <th>确认时间</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patent in confirmed_patents %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-success rounded-circle me-3">
+                                                <i class="fas fa-shield-alt text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="m-0 fw-normal">{{ patent.project_name }}</h5>
+                                                <p class="mb-0 text-muted">{{ patent.invention_title or '未填写发明名称' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ patent.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ patent.applicant.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ patent.confirm_time.strftime('%Y-%m-%d %H:%M') if patent.confirm_time else '未确认' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ patent.status }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-primary" 
+                                                    onclick="assignExecutor({{ patent.id }})">
+                                                <i class="fas fa-user-tie"></i> 分配执行者
+                                            </button>
+                                            <a href="{{ url_for('patent.detail', patent_id=patent.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                        <p>暂无已确认项目</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 进行中项目 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="header-title">进行中项目</h4>
+                        <span class="badge bg-primary">{{ in_progress_patents|length }} 个项目</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>申请人</th>
+                                    <th>执行者</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patent in in_progress_patents %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-warning rounded-circle me-3">
+                                                <i class="fas fa-shield-alt text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="m-0 fw-normal">{{ patent.project_name }}</h5>
+                                                <p class="mb-0 text-muted">{{ patent.invention_title or '未填写发明名称' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ patent.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ patent.applicant.name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ patent.executor.name if patent.executor else '未分配' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ patent.status }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-warning" 
+                                                    onclick="updateStatus({{ patent.id }})">
+                                                <i class="fas fa-edit"></i> 更新状态
+                                            </button>
+                                            <a href="{{ url_for('patent.detail', patent_id=patent.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-tasks fa-2x mb-2"></i>
+                                        <p>暂无进行中项目</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 分配执行者模态框 -->
+<div class="modal fade" id="assignExecutorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">分配执行者</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignExecutorForm">
+                    <div class="mb-3">
+                        <label for="executor_id" class="form-label">选择执行者</label>
+                        <select class="form-select" id="executor_id" name="executor_id" required>
+                            <option value="">请选择执行者</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssignExecutor()">分配</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 更新状态模态框 -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">更新项目状态</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateStatusForm">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">选择新状态</label>
+                        <select class="form-select" id="status" name="status" required>
+                            <option value="">请选择状态</option>
+                            <option value="准备中">准备中</option>
+                            <option value="已递交">已递交</option>
+                            <option value="审查中">审查中</option>
+                            <option value="已授权">已授权</option>
+                            <option value="维持中">维持中</option>
+                            <option value="已完成">已完成</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitUpdateStatus()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPatentId = null;
+
+function confirmPatent(patentId) {
+    if (confirm('确定要确认这个项目吗？')) {
+        fetch(`/patent/${patentId}/confirm`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目确认成功');
+                location.reload();
+            } else {
+                alert('项目确认失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('项目确认失败，请重试');
+        });
+    }
+}
+
+function assignExecutor(patentId) {
+    currentPatentId = patentId;
+    
+    // 加载员工列表
+    fetch('/api/patent/staff_list', {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const select = document.getElementById('executor_id');
+            select.innerHTML = '<option value="">请选择执行者</option>';
+            
+            data.staff_list.forEach(staff => {
+                const option = document.createElement('option');
+                option.value = staff.id;
+                option.textContent = `${staff.name} (${staff.expertise_area || '无专业领域'})`;
+                select.appendChild(option);
+            });
+            
+            const modal = new bootstrap.Modal(document.getElementById('assignExecutorModal'));
+            modal.show();
+        } else {
+            alert('加载员工列表失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('加载员工列表失败，请重试');
+    });
+}
+
+function submitAssignExecutor() {
+    const executorId = document.getElementById('executor_id').value;
+    if (!executorId) {
+        alert('请选择执行者');
+        return;
+    }
+    
+    fetch(`/api/patent/${currentPatentId}/assign_executor`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({executor_id: executorId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('执行者分配成功');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('assignExecutorModal'));
+            modal.hide();
+            location.reload();
+        } else {
+            alert('执行者分配失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('执行者分配失败，请重试');
+    });
+}
+
+function updateStatus(patentId) {
+    currentPatentId = patentId;
+    const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+    modal.show();
+}
+
+function submitUpdateStatus() {
+    const status = document.getElementById('status').value;
+    if (!status) {
+        alert('请选择状态');
+        return;
+    }
+    
+    fetch(`/api/patent/${currentPatentId}/update_status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({status: status})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('状态更新成功');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
+            modal.hide();
+            location.reload();
+        } else {
+            alert('状态更新失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('状态更新失败，请重试');
+    });
+}
+</script>
+{% endblock %}

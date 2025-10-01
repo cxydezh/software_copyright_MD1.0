@@ -27,6 +27,14 @@
                             {% endif %} fs-6">
                             {{ project.status }}
                         </span>
+                        
+                        <span class="badge {% if project.is_settled %}bg-success{% else %}bg-secondary{% endif %} fs-6 ms-2">
+                            {% if project.is_settled %}
+                                <i class="fas fa-check-circle"></i> 已结清
+                            {% else %}
+                                <i class="fas fa-clock"></i> 未结清
+                            {% endif %}
+                        </span>
                     </p>
                 </div>
             </div>
@@ -34,10 +42,9 @@
             <!-- 进度条 -->
             <div class="card mb-4">
                 <div class="card-body">
-                    <div class="progress mb-3" style="height: 20px;">
-                        <div class="progress-bar bg-primary" role="progressbar" 
-                             style="width: {{ ((current_step + 1) / status_flow|length * 100)|round }}%">
-                            {{ ((current_step + 1) / status_flow|length * 100)|round }}%
+                    <div class="progress mb-3" style="height: 20px; --progress-width: {{ progress_percentage }}%;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: var(--progress-width);">
+                            {{ progress_percentage }}%
                         </div>
                     </div>
                     <p class="text-center text-muted">
@@ -72,7 +79,7 @@
                                     {% if status == '待确认' and project.apply_time %}
                                         {{ project.apply_time.strftime('%Y-%m-%d %H:%M') }}
                                     {% elif status == '已确认' and project.confirm_time %}
-                                        {{ project.confirm_time.strftime('%Y-%m-%d %H:%M') }}
+                                        {{ project.confirm_time.strftime('%Y-%m-%d %H:%M') if project.confirm_time else '未确认' }}
                                     {% elif status == '执行中' and project.execute_time %}
                                         {{ project.execute_time.strftime('%Y-%m-%d %H:%M') }}
                                     {% elif status == '已完成' and project.complete_time %}
@@ -81,8 +88,6 @@
                                         {{ project.submit_time.strftime('%Y-%m-%d %H:%M') }}
                                     {% elif status == '证书完成' and project.certificate_time %}
                                         {{ project.certificate_time.strftime('%Y-%m-%d %H:%M') }}
-                                    {% elif status == '已结清' and project.settle_time %}
-                                        {{ project.settle_time.strftime('%Y-%m-%d %H:%M') }}
                                     {% elif loop.index0 <= current_step %}
                                         已完成
                                     {% else %}
@@ -108,16 +113,61 @@
                                         <small class="text-muted">已获取版权中心流水号</small>
                                     {% elif status == '证书完成' %}
                                         <small class="text-muted">软件著作权证书已获取</small>
-                                    {% elif status == '已结清' %}
-                                        <small class="text-muted">项目费用已结清</small>
                                     {% elif status == '已归档' %}
-                                        <small class="text-muted">项目已完成并归档</small>
+                                        <small class="text-muted">项目已完成并归档{% if project.is_settled %} (已结清){% endif %}</small>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
+
+                    {% if process_logs %}
+                    <hr>
+                    <h6 class="mb-3"><i class="fas fa-stream"></i> 流程记录</h6>
+                    <ul class="list-group">
+                        {% for log in process_logs %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">
+                                    {% if log.action == 'reject_to_user' %}
+                                        驳回给用户
+                                    {% elif log.action == 'return_to_business' %}
+                                        驳回给业务员
+                                    {% elif log.action == 'user_resubmit' %}
+                                        用户重新申请
+                                    {% elif log.action == 'user_cancel' %}
+                                        用户取消申请
+                                    {% elif log.action == 'confirm' %}
+                                        业务员确认
+                                    {% elif log.action == 'approve' %}
+                                        立项
+                                    {% elif log.action == 'take' %}
+                                        执行者接受
+                                    {% elif log.action == 'complete' %}
+                                        项目完成
+                                    {% elif log.action == 'settle' %}
+                                        标记结清
+                                    {% elif log.action == 'unsettle' %}
+                                        取消结清
+                                    {% elif log.action == 'update_status' %}
+                                        状态更新
+                                    {% else %}
+                                        其他
+                                    {% endif %}
+                                    {% if log.from_status or log.to_status %}
+                                        （{{ log.from_status or '-' }} → {{ log.to_status or '-' }}）
+                                    {% endif %}
+                                </div>
+                                {% if log.note %}
+                                <div class="text-muted small">{{ log.note }}</div>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-light text-muted">{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else '' }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                 </div>
             </div>
 
@@ -145,6 +195,18 @@
                                     {{ project.priority }}
                                 </span>
                             </p>
+                            <p><strong>结清状态：</strong>
+                                <span class="badge {% if project.is_settled %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {% if project.is_settled %}
+                                        <i class="fas fa-check-circle"></i> 已结清
+                                    {% else %}
+                                        <i class="fas fa-clock"></i> 未结清
+                                    {% endif %}
+                                </span>
+                                {% if project.settle_time %}
+                                <small class="text-muted">({{ project.settle_time.strftime('%Y-%m-%d %H:%M') }})</small>
+                                {% endif %}
+                            </p>
                             <p><strong>流水号：</strong>{{ project.serial_number or '暂未获取' }}</p>
                             <p><strong>申请时间：</strong>{{ project.apply_time.strftime('%Y-%m-%d %H:%M') if project.apply_time else '未知' }}</p>
                         </div>
@@ -159,74 +221,8 @@
                     </div>
                     {% endif %}
                 </div>
-                
-                <div class="card-footer text-center">
-                    <a href="{{ url_for('user.dashboard') }}" class="btn btn-secondary me-2">
-                        <i class="fas fa-arrow-left"></i> 返回用户中心
-                    </a>
-                    <a href="{{ url_for('user.project_detail', project_id=project.id) }}" class="btn btn-primary">
-                        <i class="fas fa-eye"></i> 查看项目详情
-                    </a>
-                </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-.status-timeline {
-    position: relative;
-    padding-left: 3rem;
-}
-
-.status-timeline::before {
-    content: '';
-    position: absolute;
-    left: 1.5rem;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #dee2e6;
-}
-
-.status-item {
-    position: relative;
-    margin-bottom: 2rem;
-}
-
-.status-item.completed .status-marker {
-    background: #28a745;
-    color: white;
-}
-
-.status-item.pending .status-marker {
-    background: #dee2e6;
-    color: #6c757d;
-}
-
-.status-marker {
-    position: absolute;
-    left: -2.25rem;
-    top: 0;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 2px #dee2e6;
-}
-
-.status-content {
-    padding-left: 1rem;
-}
-
-.message-item:last-child {
-    border-bottom: none !important;
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-}
-</style>
 {% endblock %}

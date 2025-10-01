@@ -220,8 +220,14 @@ class SoftwareCopyrightMS:
                     print(f"同步了 {len(self.projects)} 个项目")
                 else:
                     print("项目同步失败:", data.get('message', '未知错误'))
+                    # 如果是权限问题，提示用户重新登录
+                    if '登录' in data.get('message', ''):
+                        print("请重新登录桌面应用")
             else:
                 print(f"项目同步失败: HTTP {response.status_code}")
+        except json.JSONDecodeError as e:
+            print(f"项目同步错误: JSON解析失败 - {str(e)}")
+            print("服务器可能返回了非JSON格式的响应")
         except Exception as e:
             print(f"项目同步错误: {str(e)}")
     

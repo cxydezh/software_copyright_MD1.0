@@ -20,6 +20,18 @@ class Config:
     # 安全配置
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None
+    
+    # 邮件配置
+    MAIL_SERVER = 'smtp.qq.com'  # QQ邮箱SMTP服务器
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = os.environ.get('APPEMAILACCOUNT')
+    MAIL_PASSWORD = os.environ.get('APPEMAILSMTP')  # 使用SMTP授权码
+    MAIL_DEFAULT_SENDER = os.environ.get('APPEMAILACCOUNT')
+    
+    # 应用配置
+    APP_NAME = '软件著作权管理系统'
+    APP_URL = 'http://localhost:5000'
 
 class DevelopmentConfig(Config):
     """开发环境配置"""

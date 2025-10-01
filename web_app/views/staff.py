@@ -7,7 +7,7 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database.models import db, Project, Message, User, Staff
+from database.models import db, Project, Message, User, Staff, ProcessLog
 from werkzeug.security import generate_password_hash
 
 staff_bp = Blueprint('staff', __name__)
@@ -31,7 +31,8 @@ def business_dashboard():
         'pending_count': len(pending_projects),
         'confirmed_count': len(confirmed_projects),
         'in_progress_count': len([p for p in confirmed_projects if p.status in ['已确认', '已立项', '执行中']]),
-        'completed_count': len([p for p in confirmed_projects if p.status in ['已完成', '已上传', '已获取流水号', '证书完成', '已结清', '已归档']])
+        'completed_count': len([p for p in confirmed_projects if p.status in ['已完成', '已上传', '已获取流水号', '证书完成', '已归档']]),
+        'settled_count': len([p for p in confirmed_projects if p.is_settled])
     }
     
     # 获取最近的消息
@@ -42,6 +43,85 @@ def business_dashboard():
                          confirmed_projects=confirmed_projects,
                          stats=stats,
                          recent_messages=recent_messages)
+
+@staff_bp.route('/project/<int:project_id>/reject', methods=['POST'])
+@login_required
+def reject_project(project_id):
+    """业务员在待确认阶段，驳回给用户并附带修改意见（不改变状态，记录流程）"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    project = Project.query.get_or_404(project_id)
+    if project.status != '待确认':
+        return jsonify({'success': False, 'message': '当前状态不能驳回，请返回待确认后操作'})
+    data = request.get_json() or {}
+    reason = (data.get('reject_reason') or '').strip()
+    if not reason:
+        return jsonify({'success': False, 'message': '请输入驳回原因'})
+    try:
+        # 记录流程
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='reject_to_user', actor_id=current_user.id, actor_role='staff',
+            from_status=project.status, to_status=project.status, note=reason))
+        # 通知用户
+        db.session.add(Message(
+            content=f'您的项目【{project.project_name}】被驳回：{reason}',
+            user_id=project.applicant_id,
+            staff_id=current_user.id,
+            project_id=project.id
+        ))
+        db.session.commit()
+        return jsonify({'success': True, 'message': '已驳回并通知用户修改'})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '驳回失败，请重试'})
+
+@staff_bp.route('/project/<int:project_id>/reject_to_business', methods=['POST'])
+@login_required
+def reject_to_business(project_id):
+    """立项人将已确认项目退回给业务员完善（状态回到待确认）"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    # 权限：确认者且有立项权限，或 项目执行者角色（用于可接受项目的退回）
+    is_approver = hasattr(current_user, 'position') and current_user.position and current_user.position.can_approve
+    is_executor_role = hasattr(current_user, 'position') and current_user.position and current_user.position.position == '项目执行者'
+    project = Project.query.get_or_404(project_id)
+    if project.status != '已确认':
+        return jsonify({'success': False, 'message': '仅已确认的项目可以退回业务员'})
+    # 确认者退回需本人且有立项权限；执行者可在未分配执行者时退回
+    if is_approver:
+        if project.confirmer_id != current_user.id:
+            return jsonify({'success': False, 'message': '您不是该项目的确认者，无权退回'})
+    elif is_executor_role:
+        if project.executor_id is not None:
+            return jsonify({'success': False, 'message': '该项目已分配执行者，无法退回'})
+    else:
+        return jsonify({'success': False, 'message': '您没有权限退回该项目'})
+    data = request.get_json() or {}
+    reason = (data.get('reject_reason') or '').strip()
+    if not reason:
+        return jsonify({'success': False, 'message': '请输入退回原因'})
+    try:
+        prev_status = project.status
+        project.status = '待确认'
+        project.confirm_time = None
+        # 流程记录
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='return_to_business', actor_id=current_user.id, actor_role='staff',
+            from_status=prev_status, to_status=project.status, note=reason))
+        # 通知业务员（确认者自己）
+        db.session.add(Message(
+            content=f'项目【{project.project_name}】被退回至待确认：{reason}',
+            user_id=None,
+            staff_id=project.confirmer_id,
+            project_id=project.id
+        ))
+        db.session.commit()
+        return jsonify({'success': True, 'message': '已退回给业务员完善'})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
 
 @staff_bp.route('/executor_dashboard')
 @login_required
@@ -60,7 +140,10 @@ def executor_dashboard():
     assigned_projects = Project.query.filter_by(executor_id=current_user.id).order_by(Project.execute_time.desc()).all()
     
     # 获取待立项的项目（已确认但未分配执行者）
-    available_projects = Project.query.filter_by(status='已立项', executor_id=None).order_by(Project.confirm_time.desc()).all()
+    available_projects = Project.query.filter_by(status='已确认', executor_id=None).order_by(Project.confirm_time.desc()).all()
+    
+    # 获取已立项待执行的项目（已立项且未分配执行者）
+    approved_projects = Project.query.filter_by(status='已立项', executor_id=None).order_by(Project.confirm_time.desc()).all()
     
     # 统计信息
     stats = {
@@ -73,6 +156,7 @@ def executor_dashboard():
     return render_template('staff/executor_dashboard.html',
                          assigned_projects=assigned_projects,
                          available_projects=available_projects,
+                         approved_projects=approved_projects,
                          stats=stats)
 
 @staff_bp.route('/project/<int:project_id>')
@@ -129,10 +213,22 @@ def confirm_project(project_id):
         return jsonify({'success': False, 'message': '项目状态不允许此操作'})
     
     try:
+        prev_status = project.status
         project.status = '已确认'
         project.confirmer_id = current_user.id
         project.confirm_time = datetime.utcnow()
-        
+        # 自动给申请人发送站内信提示（可选）
+        db.session.add(Message(
+            content=f'您的项目【{project.project_name}】已通过审核，进入已确认状态。',
+            user_id=project.applicant_id,
+            staff_id=current_user.id,
+            project_id=project.id
+        ))
+        # 记录流程
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='confirm', actor_id=current_user.id, actor_role='staff',
+            from_status=prev_status, to_status=project.status, note='业务员确认项目'))
         db.session.commit()
         return jsonify({'success': True, 'message': '项目确认成功'})
     except Exception as e:
@@ -142,22 +238,41 @@ def confirm_project(project_id):
 @staff_bp.route('/project/<int:project_id>/approve', methods=['POST'])
 @login_required
 def approve_project(project_id):
-    """立项申请"""
+    """立项（只有有立项权限的人可以操作）"""
     if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
         return jsonify({'success': False, 'message': '权限不足'})
     
+    # 检查立项权限
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.can_approve):
+        return jsonify({'success': False, 'message': '您没有立项权限，请联系主管'})
+    
     project = Project.query.get_or_404(project_id)
+    
     
     if project.status != '已确认':
         return jsonify({'success': False, 'message': '项目状态不允许此操作'})
     
     try:
+        prev_status = project.status
         project.status = '已立项'
+        # 不自动设置执行者，等待执行者自己接受项目
+        # project.executor_id 保持为 None
+        # 通知执行者团队（此处仅发站内信给确认者自身，后续可扩展）
+        db.session.add(Message(
+            content=f'项目【{project.project_name}】已立项，等待执行者接受。',
+            user_id=None,
+            staff_id=current_user.id,
+            project_id=project.id
+        ))
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='approve', actor_id=current_user.id, actor_role='staff',
+            from_status=prev_status, to_status=project.status, note='立项'))
         db.session.commit()
-        return jsonify({'success': True, 'message': '立项申请成功'})
+        return jsonify({'success': True, 'message': '项目立项成功，等待执行者接受'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': '立项申请失败，请重试'})
+        return jsonify({'success': False, 'message': '立项失败，请重试'})
 
 @staff_bp.route('/project/<int:project_id>/take', methods=['POST'])
 @login_required
@@ -165,21 +280,29 @@ def take_project(project_id):
     """接受项目执行"""
     if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
         return jsonify({'success': False, 'message': '权限不足'})
-    
-    # 检查是否为项目执行者
-    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '项目执行者'):
-        return jsonify({'success': False, 'message': '您不是项目执行者'})
-    
+        
     project = Project.query.get_or_404(project_id)
     
     if project.status != '已立项' or project.executor_id is not None:
         return jsonify({'success': False, 'message': '项目状态不允许此操作'})
     
     try:
+        prev_status = project.status
         project.executor_id = current_user.id
         project.execute_time = datetime.utcnow()
         project.status = '执行中'
-        
+        # 通知确认者
+        if project.confirmer_id:
+            db.session.add(Message(
+                content=f'项目【{project.project_name}】已被执行者接受，进入执行中。',
+                user_id=None,
+                staff_id=project.confirmer_id,
+                project_id=project.id
+            ))
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='take', actor_id=current_user.id, actor_role='staff',
+            from_status=prev_status, to_status=project.status, note='执行者接受项目'))
         db.session.commit()
         return jsonify({'success': True, 'message': '项目接受成功'})
     except Exception as e:
@@ -202,9 +325,28 @@ def complete_project(project_id):
         return jsonify({'success': False, 'message': '项目状态不允许此操作'})
     
     try:
+        prev_status = project.status
         project.status = '已完成'
         project.complete_time = datetime.utcnow()
-        
+        # 通知确认者和申请人
+        if project.confirmer_id:
+            db.session.add(Message(
+                content=f'项目【{project.project_name}】已完成。',
+                user_id=None,
+                staff_id=project.confirmer_id,
+                project_id=project.id
+            ))
+        if project.applicant_id:
+            db.session.add(Message(
+                content=f'您的项目【{project.project_name}】已完成。',
+                user_id=project.applicant_id,
+                staff_id=current_user.id,
+                project_id=project.id
+            ))
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='complete', actor_id=current_user.id, actor_role='staff',
+            from_status=prev_status, to_status=project.status, note='执行者标记完成'))
         db.session.commit()
         return jsonify({'success': True, 'message': '项目标记完成成功'})
     except Exception as e:
@@ -225,13 +367,18 @@ def update_project_status(project_id):
     if project.confirmer_id != current_user.id and project.executor_id != current_user.id:
         return jsonify({'success': False, 'message': '您没有权限操作此项目'})
     
-    # 状态转换逻辑
-    valid_statuses = ['已完成', '已上传', '已获取流水号', '证书完成', '已结清', '已归档']
+    # 状态转换逻辑（已结清不在此列表中，它有独立的操作）
+    valid_statuses = ['已完成', '已上传', '已获取流水号', '证书完成', '已归档']
     
     if new_status not in valid_statuses:
         return jsonify({'success': False, 'message': '无效的状态'})
     
+    # 如果要归档，必须先结清
+    if new_status == '已归档' and not project.is_settled:
+        return jsonify({'success': False, 'message': '项目必须先结清才能归档'})
+    
     try:
+        prev_status = project.status
         project.status = new_status
         
         # 更新相应的时间字段
@@ -239,14 +386,73 @@ def update_project_status(project_id):
             project.submit_time = datetime.utcnow()
         elif new_status == '证书完成':
             project.certificate_time = datetime.utcnow()
-        elif new_status == '已结清':
-            project.settle_time = datetime.utcnow()
-        
+        elif new_status == '已归档':
+            project.is_archived = True
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='update_status', actor_id=current_user.id, actor_role='staff',
+            from_status=prev_status, to_status=project.status, note=f'更新状态为{new_status}'))
         db.session.commit()
         return jsonify({'success': True, 'message': '状态更新成功'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': '状态更新失败，请重试'})
+
+@staff_bp.route('/project/<int:project_id>/settle', methods=['POST'])
+@login_required
+def settle_project(project_id):
+    """标记项目为已结清"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    project = Project.query.get_or_404(project_id)
+    
+    # 检查权限（业务员和执行者都可以标记结清）
+    if project.confirmer_id != current_user.id and project.executor_id != current_user.id:
+        return jsonify({'success': False, 'message': '您没有权限操作此项目'})
+    
+    try:
+        project.is_settled = True
+        project.settle_time = datetime.utcnow()
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='settle', actor_id=current_user.id, actor_role='staff',
+            from_status=None, to_status=project.status, note='标记为已结清'))
+        db.session.commit()
+        return jsonify({'success': True, 'message': '项目已标记为结清'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
+
+@staff_bp.route('/project/<int:project_id>/unsettle', methods=['POST'])
+@login_required
+def unsettle_project(project_id):
+    """取消项目结清标记"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    project = Project.query.get_or_404(project_id)
+    
+    # 检查权限
+    if project.confirmer_id != current_user.id and project.executor_id != current_user.id:
+        return jsonify({'success': False, 'message': '您没有权限操作此项目'})
+    
+    # 如果已归档，不能取消结清
+    if project.status == '已归档':
+        return jsonify({'success': False, 'message': '已归档的项目不能取消结清'})
+    
+    try:
+        project.is_settled = False
+        project.settle_time = None
+        db.session.add(ProcessLog(
+            project_type='software', project_id=project.id,
+            action='unsettle', actor_id=current_user.id, actor_role='staff',
+            from_status=None, to_status=project.status, note='取消结清标记'))
+        db.session.commit()
+        return jsonify({'success': True, 'message': '已取消结清标记'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
 
 @staff_bp.route('/project/<int:project_id>/update_serial', methods=['POST'])
 @login_required
@@ -305,6 +511,57 @@ def send_message():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': '消息发送失败，请重试'})
+
+@staff_bp.route('/assigned_projects')
+@login_required
+def assigned_projects():
+    """查看所有分配给我的项目"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # 检查是否为项目执行者
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '项目执行者'):
+        flash('您不是项目执行者', 'warning')
+        return redirect(url_for('staff.business_dashboard'))
+    
+    # 获取分配给我的所有项目
+    assigned_projects = Project.query.filter_by(executor_id=current_user.id).order_by(Project.execute_time.desc()).all()
+    
+    return render_template('staff/assigned_projects.html', assigned_projects=assigned_projects)
+
+@staff_bp.route('/available_projects')
+@login_required
+def available_projects():
+    """查看所有可接受的项目"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # 检查是否为项目执行者
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '项目执行者'):
+        flash('您不是项目执行者', 'warning')
+        return redirect(url_for('staff.business_dashboard'))
+    
+    # 获取待立项的项目（已确认但未分配执行者）
+    available_projects = Project.query.filter_by(status='已确认', executor_id=None).order_by(Project.confirm_time.desc()).all()
+    
+    return render_template('staff/available_projects.html', available_projects=available_projects)
+
+@staff_bp.route('/approved_projects')
+@login_required
+def approved_projects_page():
+    """查看所有已立项待执行的项目（未分配执行者）"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    # 仅项目执行者可见
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '项目执行者'):
+        flash('您不是项目执行者', 'warning')
+        return redirect(url_for('staff.business_dashboard'))
+
+    approved_projects = Project.query.filter_by(status='已立项', executor_id=None).order_by(Project.confirm_time.desc()).all()
+    return render_template('staff/approved_projects.html', approved_projects=approved_projects)
 
 @staff_bp.route('/apply_business', methods=['GET', 'POST'])
 @login_required

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}我的项目 - 项目执行者工作台{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('staff.executor_dashboard') }}">执行者工作台</a></li>
+                        <li class="breadcrumb-item active">我的项目</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">我的项目</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tasks"></i> 分配给我的项目 ({{ assigned_projects|length }})
+                        </h5>
+                        <a href="{{ url_for('staff.executor_dashboard') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-arrow-left"></i> 返回工作台
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if assigned_projects %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>申请人类型</th>
+                                    <th>优先级</th>
+                                    <th>状态</th>
+                                    <th>执行时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in assigned_projects %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary rounded-circle me-3">
+                                                <i class="fas fa-code text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="m-0 fw-normal">{{ project.project_name }}</h6>
+                                                <small class="text-muted">{{ project.copyright_owner or '未填写著作权人' }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ project.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ project.applicant_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if project.priority == '快速' %}bg-danger
+                                            {% elif project.priority == '加急' %}bg-warning
+                                            {% else %}bg-info
+                                            {% endif %}">
+                                            {{ project.priority }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if project.status == '执行中' %}bg-warning
+                                            {% elif project.status == '已完成' %}bg-success
+                                            {% elif project.status in ['已上传', '已获取流水号', '证书完成'] %}bg-info
+                                            {% else %}bg-secondary
+                                            {% endif %}">
+                                            {{ project.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ project.execute_time.strftime('%Y-%m-%d %H:%M') if project.execute_time else '未开始' }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('staff.project_detail', project_id=project.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="查看详情">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if project.status == '执行中' %}
+                                            <button class="btn btn-sm btn-success" 
+                                                    onclick="completeProject('{{ project.id }}')" title="标记完成">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-info" 
+                                                    onclick="updateStatus('{{ project.id }}')" title="更新状态">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">暂无分配的项目</h5>
+                        <p class="text-muted">当有项目分配给您时，会在这里显示</p>
+                        <a href="{{ url_for('staff.executor_dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left"></i> 返回工作台
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 更新状态模态框 -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">更新项目状态</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updateStatusForm">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">选择新状态</label>
+                        <select class="form-select" id="status" name="status" required>
+                            <option value="">请选择状态</option>
+                            <option value="已完成">已完成</option>
+                            <option value="已上传">已上传</option>
+                            <option value="已获取流水号">已获取流水号</option>
+                            <option value="证书完成">证书完成</option>
+                            <option value="已归档">已归档</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitUpdateStatus()">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentProjectId = null;
+
+function completeProject(projectId) {
+    if (confirm('确定要标记这个项目为已完成吗？')) {
+        fetch(`/staff/project/${projectId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目标记完成成功！');
+                location.reload();
+            } else {
+                alert('操作失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+
+function updateStatus(projectId) {
+    currentProjectId = projectId;
+    const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+    modal.show();
+}
+
+function submitUpdateStatus() {
+    const status = document.getElementById('status').value;
+    if (!status) {
+        alert('请选择状态');
+        return;
+    }
+    
+    fetch(`/staff/project/${currentProjectId}/update_status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({status: status})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('状态更新成功');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
+            modal.hide();
+            location.reload();
+        } else {
+            alert('状态更新失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('状态更新失败，请重试');
+    });
+}
+</script>
+{% endblock %}

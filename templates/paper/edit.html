@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}编辑论文项目 - {{ paper.project_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('paper.index') }}">论文指导</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('paper.detail', paper_id=paper.id) }}">{{ paper.project_name }}</a></li>
+                        <li class="breadcrumb-item active">编辑</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">编辑论文项目</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">编辑项目信息</h4>
+                    <p class="text-muted">修改项目的基本信息，注意：项目开始执行后无法编辑。</p>
+
+                    <form method="POST" id="paperEditForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="project_name" class="form-label">项目名称 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="project_name" name="project_name" 
+                                           value="{{ paper.project_name }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">项目类型</label>
+                                    <input type="text" class="form-control" value="{{ paper.project_type }}" readonly>
+                                    <small class="text-muted">项目类型不可修改</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">服务等级</label>
+                                    <input type="text" class="form-control" value="{{ paper.service_level }}" readonly>
+                                    <small class="text-muted">服务等级不可修改</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">申请人类型</label>
+                                    <input type="text" class="form-control" value="{{ paper.applicant_type }}" readonly>
+                                    <small class="text-muted">申请人类型不可修改</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="paper_title" class="form-label">论文标题</label>
+                            <input type="text" class="form-control" id="paper_title" name="paper_title" 
+                                   value="{{ paper.paper_title or '' }}" placeholder="请输入论文标题">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="research_field" class="form-label">研究领域</label>
+                                    <input type="text" class="form-control" id="research_field" name="research_field" 
+                                           value="{{ paper.research_field or '' }}" placeholder="如：医学影像、生物医学工程等">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="target_journal" class="form-label">目标期刊</label>
+                                    <input type="text" class="form-control" id="target_journal" name="target_journal" 
+                                           value="{{ paper.target_journal or '' }}" placeholder="如：Nature、Science等">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">备注信息</label>
+                            <textarea class="form-control" id="remarks" name="remarks" rows="4" 
+                                      placeholder="请详细描述您的需求、期望的指导内容、时间要求等">{{ paper.remarks or '' }}</textarea>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{{ url_for('paper.detail', paper_id=paper.id) }}" class="btn btn-light me-2">
+                                <i class="fas fa-arrow-left"></i> 返回详情
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 保存修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">项目状态</h4>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">当前状态</label>
+                        <div>
+                            {% if paper.status == '待确认' %}
+                                <span class="badge bg-warning fs-6">{{ paper.status }}</span>
+                            {% elif paper.status in ['已确认', '进行中', '已投稿', '审稿中'] %}
+                                <span class="badge bg-info fs-6">{{ paper.status }}</span>
+                            {% elif paper.status in ['已录用', '已发表', '已完成'] %}
+                                <span class="badge bg-success fs-6">{{ paper.status }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">{{ paper.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">申请时间</label>
+                        <p class="text-muted">{{ paper.apply_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+
+                    {% if paper.confirm_time %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">确认时间</label>
+                        <p class="text-muted">{{ paper.confirm_time.strftime('%Y-%m-%d %H:%M') if paper.confirm_time else '未确认' }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">编辑说明</h6>
+                        <ul class="mb-0 small">
+                            <li>只能编辑项目名称、论文标题、研究领域、目标期刊和备注信息</li>
+                            <li>项目类型、服务等级、申请人类型不可修改</li>
+                            <li>项目开始执行后无法编辑</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 表单验证
+    $('#paperEditForm').on('submit', function(e) {
+        var projectName = $('#project_name').val().trim();
+        
+        if (!projectName) {
+            e.preventDefault();
+            alert('项目名称不能为空');
+            $('#project_name').focus();
+            return false;
+        }
+    });
+
+    // 实时验证
+    $('#project_name').on('blur', function() {
+        if ($(this).val().trim()) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+});
+</script>
+{% endblock %}

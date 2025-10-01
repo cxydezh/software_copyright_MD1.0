@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_mail import Mail
 from werkzeug.security import check_password_hash
 import os
 import sys
@@ -22,6 +23,9 @@ def create_app(config_name=None):
     
     # 初始化扩展
     init_db(app)
+    
+    # 配置邮件
+    mail = Mail(app)
     
     # 配置登录管理
     login_manager = LoginManager()
@@ -66,12 +70,22 @@ def create_app(config_name=None):
     from web_app.views.user import user_bp
     from web_app.views.staff import staff_bp
     from web_app.views.api import api_bp
-    
+    from web_app.views.paper import paper_bp
+    from web_app.views.patent import patent_bp
+    from web_app.views.api_paper import api_paper_bp
+    from web_app.views.api_patent import api_patent_bp
+    from web_app.views.reports import reports_bp
+
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(main_bp)
     app.register_blueprint(user_bp, url_prefix='/user')
     app.register_blueprint(staff_bp, url_prefix='/staff')
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(paper_bp)
+    app.register_blueprint(patent_bp)
+    app.register_blueprint(api_paper_bp, url_prefix='/api')
+    app.register_blueprint(api_patent_bp, url_prefix='/api')
+    app.register_blueprint(reports_bp)
     
     # 全局模板变量
     @app.context_processor

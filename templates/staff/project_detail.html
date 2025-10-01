@@ -42,6 +42,18 @@
                                     {{ project.status }}
                                 </span>
                             </p>
+                            <p><strong>结清状态：</strong>
+                                <span class="badge {% if project.is_settled %}bg-success{% else %}bg-warning{% endif %}">
+                                    {% if project.is_settled %}
+                                        <i class="fas fa-check-circle"></i> 已结清
+                                    {% else %}
+                                        <i class="fas fa-clock"></i> 未结清
+                                    {% endif %}
+                                </span>
+                                {% if project.settle_time %}
+                                <small class="text-muted">({{ project.settle_time.strftime('%Y-%m-%d %H:%M') }})</small>
+                                {% endif %}
+                            </p>
                             <p><strong>申请时间：</strong>{{ project.apply_time.strftime('%Y-%m-%d %H:%M') if project.apply_time else '未知' }}</p>
                             <p><strong>著作权人：</strong>{{ project.copyright_owner or '未填写' }}</p>
                             <p><strong>流水号：</strong>{{ project.serial_number or '未获取' }}</p>
@@ -158,29 +170,52 @@
                 </div>
                 <div class="card-body">
                     <!-- 状态更新 -->
-                    {% if project.status == '待确认' and (not project.confirmer_id or project.confirmer_id == current_user.id) %}
-                    <button class="btn btn-success w-100 mb-2" onclick="confirmProject({{ project.id }})">
+                    {% if project.status == '待确认' %}
+                    <button class="btn btn-success w-100 mb-2" onclick="confirmProject(PROJECT_ID)">
                         <i class="fas fa-check"></i> 确认申请
+                    </button>
+                    <button class="btn btn-danger w-100 mb-2" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="fas fa-times"></i> 驳回申请
                     </button>
                     {% endif %}
                     
-                    {% if project.status == '已确认' and project.confirmer_id == current_user.id %}
-                    <button class="btn btn-info w-100 mb-2" onclick="approveProject({{ project.id }})">
+                    {% if project.status == '已确认' and project.confirmer_id == current_user.id and current_user.position is defined and current_user.position and current_user.position.can_approve %}
+                    <button class="btn btn-info w-100 mb-2" onclick="approveProject(PROJECT_ID)">
                         <i class="fas fa-arrow-right"></i> 项目立项
+                    </button>
+                    <button class="btn btn-warning w-100 mb-2" data-bs-toggle="modal" data-bs-target="#rejectToBusinessModal">
+                        <i class="fas fa-undo"></i> 驳回给业务员
                     </button>
                     {% endif %}
                     
                     {% if project.status == '已立项' and not project.executor_id and current_user.position is defined and current_user.position and current_user.position.position == '项目执行者' %}
-                    <button class="btn btn-warning w-100 mb-2" onclick="takeProject({{ project.id }})">
+                    <button class="btn btn-warning w-100 mb-2" onclick="takeProject(PROJECT_ID)">
                         <i class="fas fa-hand-paper"></i> 接受项目
                     </button>
                     {% endif %}
                     
                     {% if project.status == '执行中' and project.executor_id == current_user.id %}
-                    <button class="btn btn-success w-100 mb-2" onclick="completeProject({{ project.id }})">
+                    <button class="btn btn-success w-100 mb-2" onclick="completeProject(PROJECT_ID)">
                         <i class="fas fa-check-circle"></i> 标记完成
                     </button>
                     {% endif %}
+                    
+                    <!-- 结清操作 -->
+                    {% if project.confirmer_id == current_user.id or project.executor_id == current_user.id %}
+                        {% if not project.is_settled %}
+                        <button class="btn btn-success w-100 mb-2" onclick="settleProject(PROJECT_ID)">
+                            <i class="fas fa-money-check-alt"></i> 标记为已结清
+                        </button>
+                        {% else %}
+                            {% if project.status != '已归档' %}
+                            <button class="btn btn-warning w-100 mb-2" onclick="unsettleProject(PROJECT_ID)">
+                                <i class="fas fa-undo"></i> 取消结清标记
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                    
+                    <hr class="my-3">
                     
                     <!-- 流水号更新 -->
                     {% if project.status in ['已完成', '已上传'] and current_user.position is defined and current_user.position and current_user.position.update_serial_permission %}
@@ -188,7 +223,7 @@
                         <label class="form-label">更新流水号：</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="serialNumber" placeholder="输入流水号">
-                            <button class="btn btn-outline-primary" onclick="updateSerial({{ project.id }})">
+                            <button class="btn btn-outline-primary" onclick="updateSerial(PROJECT_ID)">
                                 <i class="fas fa-save"></i>
                             </button>
                         </div>
@@ -205,10 +240,9 @@
                             <option value="已上传">已上传</option>
                             <option value="已获取流水号">已获取流水号</option>
                             <option value="证书完成">证书完成</option>
-                            <option value="已结清">已结清</option>
-                            <option value="已归档">已归档</option>
+                            <option value="已归档">已归档{% if not project.is_settled %} (需先结清){% endif %}</option>
                         </select>
-                        <button class="btn btn-outline-secondary w-100 mt-2" onclick="updateStatus({{ project.id }})">
+                        <button class="btn btn-outline-secondary w-100 mt-2" onclick="updateStatus(PROJECT_ID)">
                             <i class="fas fa-sync"></i> 更新状态
                         </button>
                     </div>
@@ -255,10 +289,80 @@
         </div>
     </div>
 </div>
+
+<!-- 驳回申请模态框 -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-times-circle"></i> 驳回申请
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    驳回后，用户将收到通知并需要修改后重新申请
+                </div>
+                <form id="rejectForm">
+                    <div class="mb-3">
+                        <label class="form-label">驳回原因：<span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectReason" rows="4" placeholder="请详细说明驳回原因，帮助用户改进申请..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="rejectProject()">确认驳回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 驳回给业务员模态框 -->
+<div class="modal fade" id="rejectToBusinessModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-warning">
+                    <i class="fas fa-undo"></i> 驳回给业务员
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    驳回后，业务员可以完善信息后重新确认，或驳回给用户
+                </div>
+                <form id="rejectToBusinessForm">
+                    <div class="mb-3">
+                        <label class="form-label">驳回原因：<span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectToBusinessReason" rows="4" placeholder="请说明信息不完整的地方，要求业务员完善..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-warning" onclick="rejectToBusiness()">确认驳回</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Hidden data container for JavaScript -->
+<div id="projectData" style="display: none;" 
+     data-project-id="{{ project.id }}" 
+     data-applicant-id="{{ applicant.id if applicant else '' }}">
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Read data from HTML attributes
+const projectDataEl = document.getElementById('projectData');
+const PROJECT_ID = parseInt(projectDataEl.dataset.projectId);
+const APPLICANT_ID = projectDataEl.dataset.applicantId ? parseInt(projectDataEl.dataset.applicantId) : null;
+
 function confirmProject(projectId) {
     if (confirm('确定要确认这个项目申请吗？')) {
         fetch(`/staff/project/${projectId}/confirm`, {
@@ -413,8 +517,8 @@ function sendMessage() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             content: content,
-            user_id: {{ applicant.id if applicant else 'null' }},
-            project_id: {{ project.id }}
+            user_id: APPLICANT_ID,
+            project_id: PROJECT_ID
         })
     })
     .then(response => response.json())
@@ -430,6 +534,76 @@ function sendMessage() {
         console.error('Error:', error);
         alert('操作失败，请重试');
     });
+}
+
+function settleProject(projectId) {
+    if (confirm('确定要标记此项目为已结清吗？')) {
+        fetch(`/staff/project/${projectId}/settle`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目已标记为已结清！');
+                location.reload();
+            } else {
+                alert('操作失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+
+function unsettleProject(projectId) {
+    if (confirm('确定要取消此项目的结清标记吗？')) {
+        fetch(`/staff/project/${projectId}/unsettle`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('已取消结清标记！');
+                location.reload();
+            } else {
+                alert('操作失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+
+function rejectProject() {
+    const reason = document.getElementById('rejectReason').value.trim();
+    if (!reason) { alert('请输入驳回原因'); return; }
+    if (!confirm('确定要驳回此项目申请吗？')) return;
+    fetch(`/staff/project/${PROJECT_ID}/reject`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ reject_reason: reason })
+    }).then(r=>r.json()).then(d=>{
+        if (d.success) { alert('已驳回并通知用户'); location.reload(); }
+        else { alert('操作失败：' + d.message); }
+    }).catch(()=>alert('操作失败，请重试'));
+}
+
+function rejectToBusiness() {
+    const reason = document.getElementById('rejectToBusinessReason').value.trim();
+    if (!reason) { alert('请输入驳回原因'); return; }
+    if (!confirm('确定要驳回给业务员吗？')) return;
+    fetch(`/staff/project/${PROJECT_ID}/reject_to_business`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ reject_reason: reason })
+    }).then(r=>r.json()).then(d=>{
+        if (d.success) { alert('已驳回给业务员'); location.reload(); }
+        else { alert('操作失败：' + d.message); }
+    }).catch(()=>alert('操作失败，请重试'));
 }
 </script>
 {% endblock %}

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}论文指导管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item active">论文指导</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">论文指导管理</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="总项目数">总项目数</h5>
+                            <h3 class="my-2 py-1">{{ total_papers }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-file-alt text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="待确认">待确认</h5>
+                            <h3 class="my-2 py-1 text-warning">{{ pending_papers }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-clock text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="进行中">进行中</h5>
+                            <h3 class="my-2 py-1 text-info">{{ in_progress_papers }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-tasks text-info" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0 text-truncate" title="已完成">已完成</h5>
+                            <h3 class="my-2 py-1 text-success">{{ completed_papers }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <h4 class="header-title">我的论文项目</h4>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-end">
+                                <a href="{{ url_for('paper.apply') }}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> 申请论文指导
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 项目列表 -->
+                    <div class="table-responsive">
+                        <table class="table table-centered table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>服务等级</th>
+                                    <th>论文标题</th>
+                                    <th>研究领域</th>
+                                    <th>状态</th>
+                                    <th>申请时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paper in papers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary rounded-circle me-3">
+                                                <i class="fas fa-file-alt text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h5 class="m-0 fw-normal">{{ paper.project_name }}</h5>
+                                                <p class="mb-0 text-muted">{{ paper.applicant_type }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ paper.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-info text-info">{{ paper.service_level }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 200px;" title="{{ paper.paper_title }}">
+                                            {{ paper.paper_title or '未填写' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.research_field or '未填写' }}</span>
+                                    </td>
+                                    <td>
+                                        {% if paper.status == '待确认' %}
+                                            <span class="badge bg-warning">{{ paper.status }}</span>
+                                        {% elif paper.status in ['已确认', '进行中', '已投稿', '审稿中'] %}
+                                            <span class="badge bg-info">{{ paper.status }}</span>
+                                        {% elif paper.status in ['已录用', '已发表', '已完成'] %}
+                                            <span class="badge bg-success">{{ paper.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ paper.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ paper.apply_time.strftime('%Y-%m-%d') }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('paper.detail', paper_id=paper.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 查看
+                                            </a>
+                                            {% if paper.status in ['待确认', '已确认'] %}
+                                            <a href="{{ url_for('paper.edit', paper_id=paper.id) }}" 
+                                               class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-edit"></i> 编辑
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-file-alt fa-3x mb-3"></i>
+                                        <p>暂无论文项目</p>
+                                        <a href="{{ url_for('paper.apply') }}" class="btn btn-primary">
+                                            <i class="fas fa-plus"></i> 申请第一个论文项目
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 页面加载完成后的初始化代码
+    console.log('论文指导管理页面加载完成');
+});
+</script>
+{% endblock %}

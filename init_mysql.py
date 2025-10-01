@@ -72,7 +72,7 @@ def create_sample_data():
                 password_hash='pbkdf2:sha256:260000$admin123$hash',  # 实际应用中应该使用hash
                 name='系统管理员',
                 email='admin@yiqichuang.com',
-                phone='0371-12345678',
+                phone='188 3826 9405',
                 department='技术部',
                 position_id=1,
                 is_active=True,

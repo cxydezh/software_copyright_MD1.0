@@ -138,3 +138,29 @@ MySQL
 1.	使用Python开发，服务器的应用采用B/S服务架构，个人计算机的应用采用C/S服务架构。
 2.	服务器数据库采用MySQL，个人计算机的数据库采用SQLite。使用orm框架构架构建数据库。
 3.	可以采用request插件等，应用界面可以使用TKinter库构建。
+
+ 论文编辑员
+邮箱：paper_editor@yiqichuang.com
+密码：paper123
+专利编辑员
+邮箱：patent_editor@yiqichuang.com
+密码：patent123
+专家用户
+邮箱：expert@yiqichuang.com
+密码：expert123
+业务经理
+邮箱：manager@yiqichuang.com
+密码：manager123
+项目执行者
+邮箱：executor@yiqichuang.com
+密码：executor123
+普通用户账号（选择"普通用户"登录模式）
+测试用户1
+邮箱：user1@example.com
+密码：user123
+测试用户2
+邮箱：user2@example.com
+密码：user123
+测试用户3
+邮箱：user3@example.com
+密码：user123

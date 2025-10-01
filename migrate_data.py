@@ -13,22 +13,22 @@ from sqlalchemy import create_engine, text
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from web_app.app import create_app
-from database.models import db, Staff, User, Project, Message, Permissions
+from database.models import db, Staff, User, Project, Message, Permission
 
 def connect_sqlite():
     """连接SQLite数据库"""
     sqlite_path = 'software_copyright.db'
     if not os.path.exists(sqlite_path):
-        print(f"❌ SQLite数据库文件不存在: {sqlite_path}")
+        print(f"[ERROR] SQLite数据库文件不存在: {sqlite_path}")
         return None
     
     try:
         conn = sqlite3.connect(sqlite_path)
         conn.row_factory = sqlite3.Row  # 使结果可以按列名访问
-        print(f"✅ 成功连接SQLite数据库: {sqlite_path}")
+        print(f"[SUCCESS] 成功连接SQLite数据库: {sqlite_path}")
         return conn
     except Exception as e:
-        print(f"❌ 连接SQLite数据库失败: {e}")
+        print(f"[ERROR] 连接SQLite数据库失败: {e}")
         return None
 
 def migrate_staff_data(sqlite_conn):
@@ -48,7 +48,7 @@ def migrate_staff_data(sqlite_conn):
                 # 检查是否已存在
                 existing = Staff.query.filter_by(username=row['username']).first()
                 if existing:
-                    print(f"⚠️  员工 {row['username']} 已存在，跳过")
+                    print(f"[WARNING] 员工 {row['username']} 已存在，跳过")
                     continue
                 
                 # 创建新员工记录
@@ -68,11 +68,11 @@ def migrate_staff_data(sqlite_conn):
                 migrated_count += 1
             
             db.session.commit()
-            print(f"✅ 成功迁移 {migrated_count} 个员工记录")
+            print(f"[SUCCESS] 成功迁移 {migrated_count} 个员工记录")
             return True
             
     except Exception as e:
-        print(f"❌ 迁移员工数据失败: {e}")
+        print(f"[ERROR] 迁移员工数据失败: {e}")
         db.session.rollback()
         return False
 
@@ -91,7 +91,7 @@ def migrate_user_data(sqlite_conn):
             for row in user_rows:
                 existing = User.query.filter_by(username=row['username']).first()
                 if existing:
-                    print(f"⚠️  用户 {row['username']} 已存在，跳过")
+                    print(f"[WARNING] 用户 {row['username']} 已存在，跳过")
                     continue
                 
                 user = User(
@@ -110,11 +110,11 @@ def migrate_user_data(sqlite_conn):
                 migrated_count += 1
             
             db.session.commit()
-            print(f"✅ 成功迁移 {migrated_count} 个用户记录")
+            print(f"[SUCCESS] 成功迁移 {migrated_count} 个用户记录")
             return True
             
     except Exception as e:
-        print(f"❌ 迁移用户数据失败: {e}")
+        print(f"[ERROR] 迁移用户数据失败: {e}")
         db.session.rollback()
         return False
 
@@ -133,7 +133,7 @@ def migrate_project_data(sqlite_conn):
             for row in project_rows:
                 existing = Project.query.filter_by(id=row['id']).first()
                 if existing:
-                    print(f"⚠️  项目 {row['id']} 已存在，跳过")
+                    print(f"[WARNING] 项目 {row['id']} 已存在，跳过")
                     continue
                 
                 project = Project(
@@ -161,11 +161,11 @@ def migrate_project_data(sqlite_conn):
                 migrated_count += 1
             
             db.session.commit()
-            print(f"✅ 成功迁移 {migrated_count} 个项目记录")
+            print(f"[SUCCESS] 成功迁移 {migrated_count} 个项目记录")
             return True
             
     except Exception as e:
-        print(f"❌ 迁移项目数据失败: {e}")
+        print(f"[ERROR] 迁移项目数据失败: {e}")
         db.session.rollback()
         return False
 
@@ -197,11 +197,11 @@ def migrate_message_data(sqlite_conn):
                 migrated_count += 1
             
             db.session.commit()
-            print(f"✅ 成功迁移 {migrated_count} 个消息记录")
+            print(f"[SUCCESS] 成功迁移 {migrated_count} 个消息记录")
             return True
             
     except Exception as e:
-        print(f"❌ 迁移消息数据失败: {e}")
+        print(f"[ERROR] 迁移消息数据失败: {e}")
         db.session.rollback()
         return False
 
@@ -218,12 +218,12 @@ def migrate_permissions_data(sqlite_conn):
         with app.app_context():
             migrated_count = 0
             for row in permission_rows:
-                existing = Permissions.query.filter_by(position=row['position']).first()
+                existing = Permission.query.filter_by(position=row['position']).first()
                 if existing:
-                    print(f"⚠️  权限 {row['position']} 已存在，跳过")
+                    print(f"[WARNING] 权限 {row['position']} 已存在，跳过")
                     continue
                 
-                permission = Permissions(
+                permission = Permission(
                     position=row['position'],
                     can_confirm=bool(row['can_confirm']),
                     can_execute=bool(row['can_execute']),
@@ -235,22 +235,22 @@ def migrate_permissions_data(sqlite_conn):
                 migrated_count += 1
             
             db.session.commit()
-            print(f"✅ 成功迁移 {migrated_count} 个权限记录")
+            print(f"[SUCCESS] 成功迁移 {migrated_count} 个权限记录")
             return True
             
     except Exception as e:
-        print(f"❌ 迁移权限数据失败: {e}")
+        print(f"[ERROR] 迁移权限数据失败: {e}")
         db.session.rollback()
         return False
 
 def main():
     print("=" * 60)
-    print("数据迁移：SQLite → MySQL")
+    print("Data Migration: SQLite to MySQL")
     print("=" * 60)
     
     # 检查环境变量
     if not os.environ.get('DB_PASSWORD'):
-        print("❌ 错误：请设置环境变量 DB_PASSWORD")
+        print("[ERROR] 错误：请设置环境变量 DB_PASSWORD")
         print("Windows: set DB_PASSWORD=your_password")
         print("Linux/Mac: export DB_PASSWORD=your_password")
         return
@@ -271,12 +271,12 @@ def main():
         
         if success:
             print("\n" + "=" * 60)
-            print("🎉 数据迁移完成！")
+            print("[SUCCESS] 数据迁移完成！")
             print("=" * 60)
             print("所有数据已成功从SQLite迁移到MySQL")
             print("下一步：运行 python run_web.py 启动Web应用")
         else:
-            print("\n❌ 数据迁移过程中出现错误，请检查日志")
+            print("\n[ERROR] 数据迁移过程中出现错误，请检查日志")
             
     finally:
         sqlite_conn.close()

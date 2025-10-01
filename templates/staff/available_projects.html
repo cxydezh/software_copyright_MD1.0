@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}可立项项目 - 项目执行者工作台{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('staff.executor_dashboard') }}">执行者工作台</a></li>
+                        <li class="breadcrumb-item active">可立项项目</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">可立项项目</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-hand-paper"></i> 可立项的项目 ({{ available_projects|length }})
+                        </h5>
+                        <a href="{{ url_for('staff.executor_dashboard') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-arrow-left"></i> 返回工作台
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if available_projects %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>项目名称</th>
+                                    <th>项目类型</th>
+                                    <th>申请人类型</th>
+                                    <th>优先级</th>
+                                    <th>确认时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in available_projects %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-warning rounded-circle me-3">
+                                                <i class="fas fa-hand-paper text-white"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="m-0 fw-normal">{{ project.project_name }}</h6>
+                                                <small class="text-muted">{{ project.copyright_owner or '未填写著作权人' }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-soft-primary text-primary">{{ project.project_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ project.applicant_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if project.priority == '快速' %}bg-danger
+                                            {% elif project.priority == '加急' %}bg-warning
+                                            {% else %}bg-info
+                                            {% endif %}">
+                                            {{ project.priority }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ project.confirm_time.strftime('%Y-%m-%d %H:%M') if project.confirm_time else '未确认' }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('staff.project_detail', project_id=project.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="查看详情">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button class="btn btn-sm btn-success approved-project-btn" 
+                                                    data-project-id="{{ project.id }}" title="项目立项">
+                                                <i class="fas fa-hand-paper"></i> 立项
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" 
+                                                    onclick="rejectToBusiness('{{ project.id }}')" title="驳回给业务员">
+                                                <i class="fas fa-times"></i> 驳回
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5 class="text-muted">暂无可立项的项目</h5>
+                        <p class="text-muted">当有新的项目需要立项时，会在这里显示</p>
+                        <a href="{{ url_for('staff.executor_dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left"></i> 返回工作台
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 驳回给业务员模态框 -->
+<div class="modal fade" id="rejectToBusinessModal" tabindex="-1" aria-labelledby="rejectToBusinessModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectToBusinessModalLabel">驳回项目给业务员</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rejectToBusinessForm">
+                    <div class="mb-3">
+                        <label for="rejectReason" class="form-label">驳回原因 <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectReason" name="reject_reason" rows="4" 
+                                  placeholder="请详细说明驳回的原因和需要修改的地方..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="submitRejectToBusiness()">确认驳回</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 为所有"立项项目"按钮添加事件监听器
+    const approvedProjectButtons = document.querySelectorAll('.approved-project-btn');
+    approvedProjectButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const projectId = this.getAttribute('data-project-id');
+            approvedProject(projectId);
+        });
+    });
+});
+
+function approvedProject(projectId) {
+    if (confirm('确定要立项这个项目吗？')) {
+        fetch(`/staff/project/${projectId}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目立项成功！');
+                location.reload();
+            } else {
+                alert('立项项目失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+
+// 驳回给业务员相关函数
+let currentRejectProjectId = null;
+
+function rejectToBusiness(projectId) {
+    currentRejectProjectId = projectId;
+    // 清空之前的输入
+    document.getElementById('rejectReason').value = '';
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('rejectToBusinessModal'));
+    modal.show();
+}
+
+function submitRejectToBusiness() {
+    if (!currentRejectProjectId) {
+        alert('项目ID不存在');
+        return;
+    }
+    
+    const rejectReason = document.getElementById('rejectReason').value.trim();
+    if (!rejectReason) {
+        alert('请填写驳回原因');
+        return;
+    }
+    
+    if (confirm('确定要驳回这个项目吗？')) {
+        fetch(`/staff/project/${currentRejectProjectId}/reject_to_business`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reject_reason: rejectReason
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目已驳回给业务员');
+                location.reload();
+            } else {
+                alert('驳回失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
+}
+</script>
+{% endblock %}

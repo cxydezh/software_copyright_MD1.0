@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目提醒通知</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .reminder-type {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .reminder-deadline { background-color: #fff3cd; color: #856404; }
+        .reminder-pending { background-color: #f8d7da; color: #721c24; }
+        .reminder-follow-up { background-color: #d1ecf1; color: #0c5460; }
+        .project-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .project-info h3 {
+            margin-top: 0;
+            color: #ffc107;
+        }
+        .message-content {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .action-required {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .action-required h4 {
+            margin-top: 0;
+            color: #721c24;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer p {
+            margin: 5px 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #ffc107;
+            color: #212529;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background-color: #e0a800;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>项目提醒通知</h1>
+        </div>
+        
+        <div class="content">
+            <p>尊敬的客户，您好！</p>
+            
+            <p>您的项目需要关注，详细信息如下：</p>
+            
+            <div class="project-info">
+                <h3>项目信息</h3>
+                <p><strong>项目名称：</strong>{{ project.project_name }}</p>
+                <p><strong>项目类型：</strong>{{ project.project_type }}</p>
+                <p><strong>当前状态：</strong>{{ project.status }}</p>
+                <p><strong>提醒时间：</strong>{{ moment().format('YYYY-MM-DD HH:mm') }}</p>
+                <p><strong>提醒类型：</strong>
+                    <span class="reminder-type reminder-{{ reminder_type }}">
+                        {% if reminder_type == 'deadline_approaching' %}
+                            截止日期临近
+                        {% elif reminder_type == 'long_pending' %}
+                            长时间待处理
+                        {% elif reminder_type == 'follow_up' %}
+                            需要跟进
+                        {% else %}
+                            项目提醒
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+            
+            <div class="message-content">
+                <p><strong>提醒内容：</strong></p>
+                <p>{{ message_content }}</p>
+            </div>
+            
+            {% if reminder_type == 'deadline_approaching' %}
+            <div class="action-required">
+                <h4>⚠️ 需要您的关注</h4>
+                <p>您的项目截止日期即将到来，请及时关注项目进度，如有任何问题请立即联系我们的客服团队。</p>
+            </div>
+            {% elif reminder_type == 'long_pending' %}
+            <div class="action-required">
+                <h4>📋 处理中</h4>
+                <p>您的项目已提交，我们正在加紧处理，请耐心等待。如有紧急情况，请联系我们的客服团队。</p>
+            </div>
+            {% elif reminder_type == 'follow_up' %}
+            <div class="action-required">
+                <h4>📞 需要配合</h4>
+                <p>项目需要您的配合，请及时查看项目详情并按照要求提供相关信息或材料。</p>
+            </div>
+            {% endif %}
+            
+            <p>您可以登录系统查看项目详细信息和进度：</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ url_for('main.index', _external=True) }}" class="btn">查看项目详情</a>
+            </div>
+            
+            <p>如有任何疑问，请随时联系我们的客服团队。</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>郑州医企创医疗科技有限公司</strong></p>
+            <p>客服电话：188 3826 9405</p>
+            <p>客服邮箱：admin@yiqichuang.com</p>
+            <p>工作时间：周一至周五 9:00-18:00</p>
+        </div>
+    </div>
+</body>
+</html>

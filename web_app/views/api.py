@@ -176,11 +176,15 @@ def get_statistics():
     
     # 项目状态统计
     status_stats = {}
-    statuses = ['待确认', '已确认', '已立项', '执行中', '已完成', '已上传', '已获取流水号', '证书完成', '已结清', '已归档']
+    statuses = ['待确认', '已确认', '已立项', '执行中', '已完成', '已上传', '已获取流水号', '证书完成', '已归档']
     
     for status in statuses:
         count = Project.query.filter_by(status=status).count()
         status_stats[status] = count
+    
+    # 结清状态统计（独立统计）
+    status_stats['已结清'] = Project.query.filter_by(is_settled=True).count()
+    status_stats['未结清'] = Project.query.filter_by(is_settled=False).count()
     
     # 项目类型统计
     type_stats = {}
@@ -227,9 +231,12 @@ def get_statistics():
     })
 
 @api_bp.route('/sync_projects')
-@login_required
 def sync_projects():
     """同步项目到本地客户端API"""
+    # 检查是否已登录
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': '请先登录'})
+    
     if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
         return jsonify({'success': False, 'message': '权限不足'})
     

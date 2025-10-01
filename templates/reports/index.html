@@ -1,0 +1,592 @@
+{% extends "base.html" %}
+
+{% block title %}数据报表 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('staff.business_dashboard') }}">工作台</a></li>
+                        <li class="breadcrumb-item active">数据报表</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">数据报表</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报表导航 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <ul class="nav nav-pills nav-justified" id="reportTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="project-stats-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#project-stats" type="button" role="tab">
+                                <i class="fas fa-chart-bar"></i> 项目统计
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="revenue-analysis-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#revenue-analysis" type="button" role="tab">
+                                <i class="fas fa-chart-line"></i> 收入分析
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="staff-performance-tab" data-bs-toggle="pill" 
+                                    data-bs-target="#staff-performance" type="button" role="tab">
+                                <i class="fas fa-users"></i> 员工绩效
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 报表内容 -->
+    <div class="tab-content" id="reportTabsContent">
+        <!-- 项目统计报表 -->
+        <div class="tab-pane fade show active" id="project-stats" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="header-title">项目统计报表</h4>
+                                <div class="d-flex gap-2">
+                                    <input type="date" class="form-control" id="projectStartDate" style="width: 150px;">
+                                    <input type="date" class="form-control" id="projectEndDate" style="width: 150px;">
+                                    <button class="btn btn-primary" onclick="loadProjectStats()">
+                                        <i class="fas fa-search"></i> 查询
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 统计卡片 -->
+                            <div class="row" id="projectStatsCards">
+                                <!-- 动态加载内容 -->
+                            </div>
+
+                            <!-- 图表区域 -->
+                            <div class="row">
+                                <div class="col-lg-8">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">月度项目趋势</h5>
+                                            <canvas id="monthlyTrendChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">项目状态分布</h5>
+                                            <canvas id="statusDistributionChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 收入分析报表 -->
+        <div class="tab-pane fade" id="revenue-analysis" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="header-title">收入分析报表</h4>
+                                <div class="d-flex gap-2">
+                                    <input type="date" class="form-control" id="revenueStartDate" style="width: 150px;">
+                                    <input type="date" class="form-control" id="revenueEndDate" style="width: 150px;">
+                                    <button class="btn btn-primary" onclick="loadRevenueAnalysis()">
+                                        <i class="fas fa-search"></i> 查询
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 收入概览 -->
+                            <div class="row" id="revenueOverview">
+                                <!-- 动态加载内容 -->
+                            </div>
+
+                            <!-- 图表区域 -->
+                            <div class="row">
+                                <div class="col-lg-8">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">月度收入趋势</h5>
+                                            <canvas id="revenueTrendChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">收入结构分析</h5>
+                                            <canvas id="revenueStructureChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 员工绩效报表 -->
+        <div class="tab-pane fade" id="staff-performance" role="tabpanel">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="header-title">员工绩效报表</h4>
+                                <div class="d-flex gap-2">
+                                    <select class="form-select" id="staffSelect" style="width: 200px;">
+                                        <option value="">所有员工</option>
+                                    </select>
+                                    <input type="date" class="form-control" id="performanceStartDate" style="width: 150px;">
+                                    <input type="date" class="form-control" id="performanceEndDate" style="width: 150px;">
+                                    <button class="btn btn-primary" onclick="loadStaffPerformance()">
+                                        <i class="fas fa-search"></i> 查询
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 绩效表格 -->
+                            <div class="table-responsive">
+                                <table class="table table-centered table-nowrap mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>排名</th>
+                                            <th>员工姓名</th>
+                                            <th>邮箱</th>
+                                            <th>专业领域</th>
+                                            <th>确认项目</th>
+                                            <th>执行项目</th>
+                                            <th>完成项目</th>
+                                            <th>绩效分数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="staffPerformanceTable">
+                                        <!-- 动态加载内容 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// 页面加载完成后初始化
+$(document).ready(function() {
+    // 设置默认日期范围（最近30天）
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    $('#projectStartDate, #revenueStartDate, #performanceStartDate').val(thirtyDaysAgo.toISOString().split('T')[0]);
+    $('#projectEndDate, #revenueEndDate, #performanceEndDate').val(today.toISOString().split('T')[0]);
+    
+    // 加载初始数据
+    loadProjectStats();
+    loadStaffList();
+});
+
+// 加载项目统计数据
+function loadProjectStats() {
+    const startDate = $('#projectStartDate').val();
+    const endDate = $('#projectEndDate').val();
+    
+    $.ajax({
+        url: '/reports/project_statistics',
+        type: 'GET',
+        data: { start_date: startDate, end_date: endDate },
+        success: function(response) {
+            if (response.success) {
+                displayProjectStats(response.data);
+                updateMonthlyTrendChart(response.data.monthly_stats);
+                updateStatusDistributionChart(response.data.status_stats);
+            } else {
+                alert('加载项目统计数据失败：' + response.message);
+            }
+        },
+        error: function() {
+            alert('加载项目统计数据失败，请重试');
+        }
+    });
+}
+
+// 显示项目统计数据
+function displayProjectStats(data) {
+    const paperStats = data.paper_stats;
+    const patentStats = data.patent_stats;
+    
+    const cardsHtml = `
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">论文项目</h5>
+                            <h3 class="my-2 py-1 text-primary">${paperStats.total}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-file-alt text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">专利项目</h5>
+                            <h3 class="my-2 py-1 text-success">${patentStats.total}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-shield-alt text-success" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">进行中</h5>
+                            <h3 class="my-2 py-1 text-warning">${paperStats.in_progress + patentStats.in_progress}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-tasks text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">已完成</h5>
+                            <h3 class="my-2 py-1 text-info">${paperStats.completed + patentStats.completed}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-check-circle text-info" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('#projectStatsCards').html(cardsHtml);
+}
+
+// 更新月度趋势图表
+function updateMonthlyTrendChart(monthlyStats) {
+    const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: monthlyStats.map(item => item.month),
+            datasets: [{
+                label: '论文项目',
+                data: monthlyStats.map(item => item.paper_count),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }, {
+                label: '专利项目',
+                data: monthlyStats.map(item => item.patent_count),
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// 更新状态分布图表
+function updateStatusDistributionChart(statusStats) {
+    const ctx = document.getElementById('statusDistributionChart').getContext('2d');
+    
+    const paperStatus = statusStats.paper_status;
+    const patentStatus = statusStats.patent_status;
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: paperStatus.map(item => item.status),
+            datasets: [{
+                data: paperStatus.map(item => item.count),
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF',
+                    '#FF9F40'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// 加载收入分析数据
+function loadRevenueAnalysis() {
+    const startDate = $('#revenueStartDate').val();
+    const endDate = $('#revenueEndDate').val();
+    
+    $.ajax({
+        url: '/reports/revenue_analysis',
+        type: 'GET',
+        data: { start_date: startDate, end_date: endDate },
+        success: function(response) {
+            if (response.success) {
+                displayRevenueOverview(response.data);
+                updateRevenueTrendChart(response.data.monthly_revenue);
+            } else {
+                alert('加载收入分析数据失败：' + response.message);
+            }
+        },
+        error: function() {
+            alert('加载收入分析数据失败，请重试');
+        }
+    });
+}
+
+// 显示收入概览
+function displayRevenueOverview(data) {
+    const paperRevenue = data.paper_revenue;
+    const patentRevenue = data.patent_revenue;
+    const totalRevenue = paperRevenue.total + patentRevenue.total;
+    
+    const overviewHtml = `
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">总收入</h5>
+                            <h3 class="my-2 py-1 text-primary">¥${totalRevenue.toLocaleString()}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-dollar-sign text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">论文收入</h5>
+                            <h3 class="my-2 py-1 text-success">¥${paperRevenue.total.toLocaleString()}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-file-alt text-success" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">专利收入</h5>
+                            <h3 class="my-2 py-1 text-warning">¥${patentRevenue.total.toLocaleString()}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-shield-alt text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5 class="text-muted fw-normal mt-0">平均收入</h5>
+                            <h3 class="my-2 py-1 text-info">¥${((paperRevenue.average + patentRevenue.average) / 2).toLocaleString()}</h3>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-end">
+                                <i class="fas fa-chart-line text-info" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('#revenueOverview').html(overviewHtml);
+}
+
+// 更新收入趋势图表
+function updateRevenueTrendChart(monthlyRevenue) {
+    const ctx = document.getElementById('revenueTrendChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: monthlyRevenue.map(item => item.month),
+            datasets: [{
+                label: '总收入',
+                data: monthlyRevenue.map(item => item.total_revenue),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '¥' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// 加载员工列表
+function loadStaffList() {
+    $.ajax({
+        url: '/api/paper/staff_list',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const staffSelect = $('#staffSelect');
+                staffSelect.empty().append('<option value="">所有员工</option>');
+                
+                response.staff_list.forEach(staff => {
+                    staffSelect.append(`<option value="${staff.id}">${staff.name}</option>`);
+                });
+            }
+        }
+    });
+}
+
+// 加载员工绩效数据
+function loadStaffPerformance() {
+    const staffId = $('#staffSelect').val();
+    const startDate = $('#performanceStartDate').val();
+    const endDate = $('#performanceEndDate').val();
+    
+    $.ajax({
+        url: '/reports/staff_performance',
+        type: 'GET',
+        data: { 
+            staff_id: staffId, 
+            start_date: startDate, 
+            end_date: endDate 
+        },
+        success: function(response) {
+            if (response.success) {
+                displayStaffPerformance(response.data);
+            } else {
+                alert('加载员工绩效数据失败：' + response.message);
+            }
+        },
+        error: function() {
+            alert('加载员工绩效数据失败，请重试');
+        }
+    });
+}
+
+// 显示员工绩效数据
+function displayStaffPerformance(data) {
+    const tbody = $('#staffPerformanceTable');
+    tbody.empty();
+    
+    data.forEach((staff, index) => {
+        const row = `
+            <tr>
+                <td>
+                    <span class="badge bg-${index < 3 ? 'primary' : 'secondary'}">${index + 1}</span>
+                </td>
+                <td>${staff.staff_name}</td>
+                <td>${staff.email}</td>
+                <td>${staff.expertise_area || '-'}</td>
+                <td>${staff.total_confirmed}</td>
+                <td>${staff.total_executed}</td>
+                <td>${staff.total_completed}</td>
+                <td>
+                    <span class="badge bg-${staff.performance_score > 20 ? 'success' : staff.performance_score > 10 ? 'warning' : 'danger'}">
+                        ${staff.performance_score}
+                    </span>
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+</script>
+{% endblock %}

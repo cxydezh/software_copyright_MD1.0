@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>执行者分配通知</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .executor-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .executor-info h3 {
+            margin-top: 0;
+            color: #28a745;
+        }
+        .executor-card {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .executor-avatar {
+            width: 60px;
+            height: 60px;
+            background-color: #28a745;
+            border-radius: 50%;
+            display: inline-block;
+            text-align: center;
+            line-height: 60px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 15px;
+            vertical-align: top;
+        }
+        .executor-details {
+            display: inline-block;
+            vertical-align: top;
+            width: calc(100% - 80px);
+        }
+        .executor-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin: 0 0 5px 0;
+        }
+        .executor-email {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .executor-expertise {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .message-content {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer p {
+            margin: 5px 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>执行者分配通知</h1>
+        </div>
+        
+        <div class="content">
+            <p>尊敬的客户，您好！</p>
+            
+            <p>您的项目已成功分配执行者，详细信息如下：</p>
+            
+            <div class="executor-info">
+                <h3>项目信息</h3>
+                <p><strong>项目名称：</strong>{{ project.project_name }}</p>
+                <p><strong>项目类型：</strong>{{ project.project_type }}</p>
+                <p><strong>分配时间：</strong>{{ moment().format('YYYY-MM-DD HH:mm') }}</p>
+            </div>
+            
+            <div class="executor-card">
+                <div class="executor-avatar">
+                    {{ executor.name[0] }}
+                </div>
+                <div class="executor-details">
+                    <div class="executor-name">{{ executor.name }}</div>
+                    <div>
+                        <a href="mailto:{{ executor.email }}" class="executor-email">{{ executor.email }}</a>
+                    </div>
+                    {% if executor.expertise_area %}
+                    <div class="executor-expertise">专业领域：{{ executor.expertise_area }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="message-content">
+                <p><strong>分配说明：</strong></p>
+                <p>{{ message_content }}</p>
+                <p>执行者将负责您的项目全程跟进，如有任何问题可直接联系执行者。</p>
+            </div>
+            
+            <p>您可以登录系统查看项目详细信息和进度：</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ url_for('main.index', _external=True) }}" class="btn">查看项目详情</a>
+            </div>
+            
+            <p>如有任何疑问，请随时联系我们的客服团队。</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>郑州医企创医疗科技有限公司</strong></p>
+            <p>客服电话：188 3826 9405</p>
+            <p>客服邮箱：admin@yiqichuang.com</p>
+            <p>工作时间：周一至周五 9:00-18:00</p>
+        </div>
+    </div>
+</body>
+</html>

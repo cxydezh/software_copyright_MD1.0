@@ -22,6 +22,24 @@ class Staff(UserMixin, db.Model):
     remarks = db.Column(db.Text, comment='备注')
     password_hash = db.Column(db.String(255), nullable=False, comment='密码哈希')
     
+    # 邮箱验证相关字段
+    email_verified = db.Column(db.Boolean, default=False, comment='邮箱是否已验证')
+    email_verification_token = db.Column(db.String(100), comment='邮箱验证令牌')
+    email_verification_expires = db.Column(db.DateTime, comment='邮箱验证令牌过期时间')
+    email_verification_code = db.Column(db.String(6), comment='邮箱验证码')
+    email_verification_code_expires = db.Column(db.DateTime, comment='验证码过期时间')
+    email_verification_tries = db.Column(db.Integer, default=0, comment='验证尝试次数')
+    last_email_sent_at = db.Column(db.DateTime, comment='最后邮件发送时间')
+    email_send_count = db.Column(db.Integer, default=0, comment='邮件发送计数')
+    
+    # 密码重置相关字段
+    password_reset_token = db.Column(db.String(100), comment='密码重置令牌')
+    password_reset_expires = db.Column(db.DateTime, comment='密码重置令牌过期时间')
+    
+    # 扩展字段 - 支持多业务类型
+    expertise_area = db.Column(db.String(200), comment='专业领域')
+    service_types = db.Column(db.String(200), comment='服务类型')
+    
     # 关系
     position = db.relationship('Permission', backref='staff_members')
     confirmed_projects = db.relationship('Project', foreign_keys='Project.confirmer_id', backref='confirmer')
@@ -53,6 +71,26 @@ class User(UserMixin, db.Model):
     remarks = db.Column(db.Text, comment='备注')
     password_hash = db.Column(db.String(255), nullable=False, comment='密码哈希')
     
+    # 邮箱验证相关字段
+    email_verified = db.Column(db.Boolean, default=False, comment='邮箱是否已验证')
+    email_verification_token = db.Column(db.String(100), comment='邮箱验证令牌')
+    email_verification_expires = db.Column(db.DateTime, comment='邮箱验证令牌过期时间')
+    email_verification_code = db.Column(db.String(6), comment='邮箱验证码')
+    email_verification_code_expires = db.Column(db.DateTime, comment='验证码过期时间')
+    email_verification_tries = db.Column(db.Integer, default=0, comment='验证尝试次数')
+    last_email_sent_at = db.Column(db.DateTime, comment='最后邮件发送时间')
+    email_send_count = db.Column(db.Integer, default=0, comment='邮件发送计数')
+    
+    # 密码重置相关字段
+    password_reset_token = db.Column(db.String(100), comment='密码重置令牌')
+    password_reset_expires = db.Column(db.DateTime, comment='密码重置令牌过期时间')
+    
+    # 扩展字段 - 支持多业务类型
+    user_category = db.Column(db.Enum('软件著作权', '论文指导', '专利申请', '综合服务'), 
+                            default='软件著作权', comment='用户类别')
+    organization = db.Column(db.String(200), comment='所属机构')
+    research_field = db.Column(db.String(100), comment='研究领域')
+    
     # 关系
     projects = db.relationship('Project', backref='applicant')
     messages = db.relationship('Message', backref='user')
@@ -73,9 +111,24 @@ class Permission(db.Model):
     __tablename__ = 'permissions'
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    position = db.Column(db.Enum('普通业务员', '项目执行者'), nullable=False, comment='职务')
-    execute_permission = db.Column(db.Boolean, default=False, comment='执行任务权限')
-    update_serial_permission = db.Column(db.Boolean, default=False, comment='更新流水号权限')
+    position = db.Column(db.Enum('普通业务员', '项目执行者', '论文编辑', '专利编辑', '专家', '系统管理员'), 
+                        nullable=False, comment='职务')
+    
+    # 基础权限
+    can_confirm = db.Column(db.Boolean, default=False, comment='确认项目权限')
+    can_approve = db.Column(db.Boolean, default=False, comment='立项权限（项目立项，指定执行者）')
+    can_execute = db.Column(db.Boolean, default=False, comment='执行任务权限')
+    can_manage = db.Column(db.Boolean, default=False, comment='管理权限')
+    can_view_all = db.Column(db.Boolean, default=False, comment='查看所有项目权限')
+    
+    # 专业权限
+    can_edit_paper = db.Column(db.Boolean, default=False, comment='编辑论文项目权限')
+    can_edit_patent = db.Column(db.Boolean, default=False, comment='编辑专利项目权限')
+    is_expert = db.Column(db.Boolean, default=False, comment='专家权限')
+    
+    # 兼容旧字段
+    execute_permission = db.Column(db.Boolean, default=False, comment='执行任务权限（兼容）')
+    update_serial_permission = db.Column(db.Boolean, default=False, comment='更新流水号权限（兼容）')
     
     def __repr__(self):
         return f'<Permission {self.position}>'
@@ -110,8 +163,9 @@ class Project(db.Model):
     
     # 状态字段
     is_archived = db.Column(db.Boolean, default=False, comment='是否归档')
+    is_settled = db.Column(db.Boolean, default=False, comment='是否已结清（可与其他状态共存）')
     status = db.Column(db.Enum('待确认', '已确认', '已立项', '执行中', '已完成', '已上传', 
-                              '已获取流水号', '证书完成', '已结清', '已归档'), 
+                              '已获取流水号', '证书完成', '已归档'), 
                       default='待确认', comment='项目状态')
     
     # 外键
@@ -146,6 +200,158 @@ class Message(db.Model):
     
     def __repr__(self):
         return f'<Message {self.id}>'
+
+class ProcessLog(db.Model):
+    """统一的项目流程日志，记录所有项目类型的操作轨迹"""
+    __tablename__ = 'process_logs'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_type = db.Column(db.Enum('software', 'paper', 'patent'), nullable=False, comment='项目类型')
+    project_id = db.Column(db.Integer, nullable=False, comment='项目ID')
+    action = db.Column(db.String(100), nullable=False, comment='动作，如confirm/approve/take/reject/...')
+    actor_id = db.Column(db.Integer, comment='操作者ID')
+    actor_role = db.Column(db.Enum('user', 'staff'), comment='操作者角色')
+    from_status = db.Column(db.String(50), comment='变更前状态')
+    to_status = db.Column(db.String(50), comment='变更后状态')
+    note = db.Column(db.Text, comment='备注/意见/说明')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, comment='创建时间')
+
+    def __repr__(self):
+        return f'<ProcessLog {self.project_type}:{self.project_id} {self.action}>'
+
+class PaperProject(db.Model):
+    """论文项目表"""
+    __tablename__ = 'paper_projects'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_name = db.Column(db.String(200), nullable=False, comment='项目名称')
+    project_type = db.Column(db.Enum('论文指导', '论文发表', '学术咨询'), 
+                           nullable=False, comment='项目类型')
+    service_level = db.Column(db.Enum('基础服务', '标准服务', '高级服务'), 
+                            nullable=False, comment='服务等级')
+    applicant_type = db.Column(db.Enum('个人学者', '医疗机构', '企业研发', '联合申请'), 
+                             nullable=False, comment='申请人类型')
+    
+    # 论文信息
+    paper_title = db.Column(db.String(500), comment='论文标题')
+    research_field = db.Column(db.String(100), comment='研究领域')
+    target_journal = db.Column(db.String(200), comment='目标期刊')
+    paper_status = db.Column(db.Enum('初稿', '修改中', '已投稿', '审稿中', '已录用', '已发表', '被拒稿'), 
+                           default='初稿', comment='论文状态')
+    
+    # 时间管理
+    apply_time = db.Column(db.DateTime, default=datetime.utcnow, comment='申请时间')
+    confirm_time = db.Column(db.DateTime, comment='确认时间')
+    start_time = db.Column(db.DateTime, comment='开始时间')
+    submit_time = db.Column(db.DateTime, comment='投稿时间')
+    accept_time = db.Column(db.DateTime, comment='录用时间')
+    publish_time = db.Column(db.DateTime, comment='发表时间')
+    
+    # 财务信息
+    price = db.Column(db.Numeric(10, 2), comment='项目价格')
+    discount = db.Column(db.Numeric(5, 2), default=0, comment='优惠折扣')
+    settle_time = db.Column(db.DateTime, comment='结清时间')
+    
+    # 状态管理
+    status = db.Column(db.Enum('待确认', '已确认', '进行中', '已投稿', '审稿中', '已录用', '已发表', '已完成', '已归档'), 
+                      default='待确认', comment='项目状态')
+    is_archived = db.Column(db.Boolean, default=False, comment='是否归档')
+    is_settled = db.Column(db.Boolean, default=False, comment='是否已结清（可与其他状态共存）')
+    
+    # 外键关联
+    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='确认者ID')
+    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='执行者ID')
+    
+    remarks = db.Column(db.Text, comment='项目备注')
+    
+    # 关系
+    applicant = db.relationship('User', backref='paper_projects')
+    confirmer = db.relationship('Staff', foreign_keys=[confirmer_id], backref='confirmed_paper_projects')
+    executor = db.relationship('Staff', foreign_keys=[executor_id], backref='executed_paper_projects')
+    
+    def __repr__(self):
+        return f'<PaperProject {self.project_name}>'
+
+class PatentProject(db.Model):
+    """专利项目表"""
+    __tablename__ = 'patent_projects'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_name = db.Column(db.String(200), nullable=False, comment='项目名称')
+    project_type = db.Column(db.Enum('发明专利申请', '实用新型申请', '外观设计申请', '国际申请', '专利保护', '专利管理'), 
+                           nullable=False, comment='项目类型')
+    applicant_type = db.Column(db.Enum('个人发明者', '企业申请', '科研院所', '联合申请'), 
+                             nullable=False, comment='申请人类型')
+    application_field = db.Column(db.Enum('医疗设备', '生物医药', '数字医疗', '其他领域'), 
+                                nullable=False, comment='申请领域')
+    
+    # 专利信息
+    invention_title = db.Column(db.String(500), comment='发明名称')
+    technical_field = db.Column(db.String(100), comment='技术领域')
+    application_number = db.Column(db.String(50), comment='申请号')
+    publication_number = db.Column(db.String(50), comment='公开号')
+    patent_number = db.Column(db.String(50), comment='专利号')
+    patent_status = db.Column(db.Enum('申请中', '公开', '实审', '授权', '维持', '终止', '无效'), 
+                            default='申请中', comment='专利状态')
+    
+    # 时间管理
+    apply_time = db.Column(db.DateTime, default=datetime.utcnow, comment='申请时间')
+    confirm_time = db.Column(db.DateTime, comment='确认时间')
+    start_time = db.Column(db.DateTime, comment='开始时间')
+    file_time = db.Column(db.DateTime, comment='递交时间')
+    publish_time = db.Column(db.DateTime, comment='公开时间')
+    grant_time = db.Column(db.DateTime, comment='授权时间')
+    
+    # 财务信息
+    price = db.Column(db.Numeric(10, 2), comment='项目价格')
+    discount = db.Column(db.Numeric(5, 2), default=0, comment='优惠折扣')
+    annual_fee = db.Column(db.Numeric(10, 2), comment='年费')
+    settle_time = db.Column(db.DateTime, comment='结清时间')
+    
+    # 状态管理
+    status = db.Column(db.Enum('待确认', '已确认', '准备中', '已递交', '审查中', '已授权', '维持中', '已完成', '已归档'), 
+                      default='待确认', comment='项目状态')
+    is_archived = db.Column(db.Boolean, default=False, comment='是否归档')
+    is_settled = db.Column(db.Boolean, default=False, comment='是否已结清（可与其他状态共存）')
+    
+    # 外键关联
+    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='确认者ID')
+    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='执行者ID')
+    
+    remarks = db.Column(db.Text, comment='项目备注')
+    
+    # 关系
+    applicant = db.relationship('User', backref='patent_projects')
+    confirmer = db.relationship('Staff', foreign_keys=[confirmer_id], backref='confirmed_patent_projects')
+    executor = db.relationship('Staff', foreign_keys=[executor_id], backref='executed_patent_projects')
+    
+    def __repr__(self):
+        return f'<PatentProject {self.project_name}>'
+
+class ProjectFile(db.Model):
+    """项目文件表"""
+    __tablename__ = 'project_files'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id = db.Column(db.Integer, nullable=False, comment='项目ID')
+    project_type = db.Column(db.Enum('software', 'paper', 'patent'), 
+                           nullable=False, comment='项目类型')
+    file_name = db.Column(db.String(255), nullable=False, comment='文件名')
+    file_path = db.Column(db.String(500), nullable=False, comment='文件路径')
+    file_type = db.Column(db.String(50), nullable=False, comment='文件类型')
+    file_size = db.Column(db.BigInteger, comment='文件大小')
+    upload_time = db.Column(db.DateTime, default=datetime.utcnow, comment='上传时间')
+    uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, comment='上传者ID')
+    file_category = db.Column(db.Enum('申请材料', '技术文档', '证书文件', '其他文件'), 
+                            nullable=False, comment='文件分类')
+    
+    # 关系
+    uploader = db.relationship('User', backref='uploaded_files')
+    
+    def __repr__(self):
+        return f'<ProjectFile {self.file_name}>'
 
 class LocalProject:
     """本地项目表（SQLite）"""

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}邮箱验证 - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-envelope-open-text"></i> 邮箱验证
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>验证码已发送！</strong> 我们已向 <strong>{{ user.email }}</strong> 发送了6位验证码，请查收邮件并输入验证码。
+                    </div>
+                    
+                    <form method="POST" id="verifyForm">
+                        <div class="mb-4">
+                            <label for="verification_code" class="form-label">验证码</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-key"></i>
+                                </span>
+                                <input type="text" class="form-control text-center" id="verification_code" 
+                                       name="verification_code" placeholder="请输入6位验证码" 
+                                       maxlength="6" pattern="[0-9]{6}" required>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-clock"></i> 验证码将在 <span id="countdown">5:00</span> 后过期
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mb-3">
+                            <button type="submit" class="btn btn-success btn-lg" id="verifyBtn">
+                                <i class="fas fa-check"></i> 验证邮箱
+                            </button>
+                        </div>
+                        
+                        <div class="text-center">
+                            <p class="mb-2">没有收到验证码？</p>
+                            <button type="button" class="btn btn-outline-primary" id="resendBtn" disabled>
+                                <i class="fas fa-paper-plane"></i> 重新发送 (<span id="resendCountdown">60</span>s)
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('auth.login') }}" class="text-decoration-none">
+                            <i class="fas fa-arrow-left"></i> 返回登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 验证说明 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-question-circle text-info"></i> 验证说明
+                    </h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li><i class="fas fa-check text-success"></i> 验证码为6位数字</li>
+                        <li><i class="fas fa-check text-success"></i> 验证码5分钟内有效</li>
+                        <li><i class="fas fa-check text-success"></i> 请检查垃圾邮件文件夹</li>
+                        <li><i class="fas fa-check text-success"></i> 如长时间未收到，请重新发送</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const verificationCodeInput = document.getElementById('verification_code');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const resendBtn = document.getElementById('resendBtn');
+    const countdownElement = document.getElementById('countdown');
+    const resendCountdownElement = document.getElementById('resendCountdown');
+    
+    let countdown = 300; // 5分钟 = 300秒
+    let resendCountdown = 60; // 60秒后才能重新发送
+    
+    // 验证码输入格式化
+    verificationCodeInput.addEventListener('input', function() {
+        // 只允许数字
+        this.value = this.value.replace(/[^0-9]/g, '');
+        
+        // 自动提交当输入6位数字时
+        if (this.value.length === 6) {
+            verifyBtn.click();
+        }
+    });
+    
+    // 倒计时功能
+    function updateCountdown() {
+        const minutes = Math.floor(countdown / 60);
+        const seconds = countdown % 60;
+        countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (countdown > 0) {
+            countdown--;
+        } else {
+            countdownElement.textContent = '已过期';
+            countdownElement.className = 'text-danger';
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fas fa-times"></i> 验证码已过期';
+        }
+    }
+    
+    // 重新发送倒计时
+    function updateResendCountdown() {
+        resendCountdownElement.textContent = resendCountdown;
+        
+        if (resendCountdown > 0) {
+            resendCountdown--;
+        } else {
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 重新发送';
+        }
+    }
+    
+    // 启动倒计时
+    const countdownInterval = setInterval(updateCountdown, 1000);
+    const resendInterval = setInterval(updateResendCountdown, 1000);
+    
+    // 重新发送验证码
+    resendBtn.addEventListener('click', function() {
+        if (resendBtn.disabled) return;
+        
+        resendBtn.disabled = true;
+        resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+        
+        // 发送AJAX请求重新发送验证码
+        fetch('{{ url_for("auth.resend_verification_code") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: '{{ user.email }}'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 重置倒计时
+                countdown = 300;
+                resendCountdown = 60;
+                countdownElement.textContent = '5:00';
+                countdownElement.className = '';
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="fas fa-check"></i> 验证邮箱';
+                
+                // 显示成功消息
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    <i class="fas fa-check-circle"></i> 验证码已重新发送！
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.card-body').insertBefore(alert, document.querySelector('.alert-info'));
+            } else {
+                alert('发送失败：' + (data.message || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('发送失败，请重试');
+        })
+        .finally(() => {
+            resendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 重新发送 (<span id="resendCountdown">60</span>s)';
+        });
+    });
+    
+    // 表单提交验证
+    document.getElementById('verifyForm').addEventListener('submit', function(e) {
+        const code = verificationCodeInput.value;
+        
+        if (code.length !== 6) {
+            e.preventDefault();
+            alert('请输入6位验证码');
+            verificationCodeInput.focus();
+            return false;
+        }
+        
+        if (!/^[0-9]{6}$/.test(code)) {
+            e.preventDefault();
+            alert('验证码只能包含数字');
+            verificationCodeInput.focus();
+            return false;
+        }
+        
+        // 显示加载状态
+        verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 验证中...';
+        verifyBtn.disabled = true;
+    });
+    
+    // 页面卸载时清理定时器
+    window.addEventListener('beforeunload', function() {
+        clearInterval(countdownInterval);
+        clearInterval(resendInterval);
+    });
+});
+</script>
+{% endblock %}

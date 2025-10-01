@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
+from datetime import datetime, timedelta
 import sys
 import os
 
@@ -8,6 +9,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from database.models import db, Staff, User
+from web_app.utils.email import generate_token, generate_verification_code, send_email_verification, send_verification_code, send_password_reset, send_welcome_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -76,18 +78,29 @@ def register():
         
         # 创建新用户
         try:
+            # 生成验证码
+            verification_code = generate_verification_code()
+            code_expires = datetime.utcnow() + timedelta(minutes=5)
+            
             new_user = User(
                 name=name,
                 email=email,
-                phone=phone
+                phone=phone,
+                email_verification_code=verification_code,
+                email_verification_code_expires=code_expires
             )
             new_user.set_password(password)
             
             db.session.add(new_user)
             db.session.commit()
             
-            flash('注册成功，请登录', 'success')
-            return redirect(url_for('auth.login'))
+            # 发送验证码邮件
+            if send_verification_code(new_user, verification_code):
+                flash('注册成功！验证码已发送到您的邮箱，请查收并完成验证。', 'success')
+                return redirect(url_for('auth.verify_code', user_id=new_user.id))
+            else:
+                flash('注册成功，但验证码邮件发送失败。请联系管理员。', 'warning')
+                return redirect(url_for('auth.login'))
             
         except Exception as e:
             db.session.rollback()
@@ -149,3 +162,209 @@ def switch_role(role):
     
     flash('无效的角色选择', 'danger')
     return redirect(url_for('auth.choose_role'))
+
+@auth_bp.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    """忘记密码页面"""
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user_type = request.form.get('user_type', 'user')
+        
+        if not email:
+            flash('请输入邮箱地址', 'danger')
+            return render_template('auth/forgot_password.html')
+        
+        # 根据用户类型查找用户
+        user = None
+        if user_type == 'staff':
+            user = Staff.query.filter_by(email=email).first()
+        else:
+            user = User.query.filter_by(email=email).first()
+        
+        if user:
+            # 生成密码重置令牌
+            reset_token = generate_token()
+            reset_expires = datetime.utcnow() + timedelta(hours=1)
+            
+            user.password_reset_token = reset_token
+            user.password_reset_expires = reset_expires
+            
+            db.session.commit()
+            
+            # 发送密码重置邮件
+            if send_password_reset(user, reset_token):
+                flash('密码重置邮件已发送，请检查您的邮箱。', 'success')
+            else:
+                flash('邮件发送失败，请重试或联系管理员。', 'danger')
+        else:
+            flash('该邮箱地址未注册', 'danger')
+    
+    return render_template('auth/forgot_password.html')
+
+@auth_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    """重置密码页面"""
+    # 查找有效的重置令牌
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user:
+        user = Staff.query.filter_by(password_reset_token=token).first()
+    
+    if not user or user.password_reset_expires < datetime.utcnow():
+        flash('密码重置链接无效或已过期', 'danger')
+        return redirect(url_for('auth.login'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not password or not confirm_password:
+            flash('请填写所有字段', 'danger')
+            return render_template('auth/reset_password.html', token=token)
+        
+        if password != confirm_password:
+            flash('两次输入的密码不一致', 'danger')
+            return render_template('auth/reset_password.html', token=token)
+        
+        if len(password) < 6:
+            flash('密码长度至少6位', 'danger')
+            return render_template('auth/reset_password.html', token=token)
+        
+        # 更新密码
+        user.set_password(password)
+        user.password_reset_token = None
+        user.password_reset_expires = None
+        
+        db.session.commit()
+        
+        flash('密码重置成功，请使用新密码登录', 'success')
+        return redirect(url_for('auth.login'))
+    
+    return render_template('auth/reset_password.html', token=token)
+
+@auth_bp.route('/verify_email/<token>')
+def verify_email(token):
+    """邮箱验证"""
+    # 查找有效的验证令牌
+    user = User.query.filter_by(email_verification_token=token).first()
+    if not user:
+        user = Staff.query.filter_by(email_verification_token=token).first()
+    
+    if not user or user.email_verification_expires < datetime.utcnow():
+        flash('验证链接无效或已过期', 'danger')
+        return redirect(url_for('auth.login'))
+    
+    # 验证邮箱
+    user.email_verified = True
+    user.email_verification_token = None
+    user.email_verification_expires = None
+    
+    db.session.commit()
+    
+    flash('邮箱验证成功！您现在可以正常使用所有功能。', 'success')
+    return redirect(url_for('auth.login'))
+
+@auth_bp.route('/resend_verification', methods=['POST'])
+def resend_verification():
+    """重新发送验证邮件"""
+    if not current_user.is_authenticated:
+        flash('请先登录', 'danger')
+        return redirect(url_for('auth.login'))
+    
+    if current_user.email_verified:
+        flash('您的邮箱已经验证过了', 'info')
+        return redirect(url_for('user.dashboard' if current_user.user_type == 'user' else 'staff.business_dashboard'))
+    
+    # 生成新的验证令牌
+    verification_token = generate_token()
+    verification_expires = datetime.utcnow() + timedelta(hours=24)
+    
+    current_user.email_verification_token = verification_token
+    current_user.email_verification_expires = verification_expires
+    
+    db.session.commit()
+    
+    # 发送验证邮件
+    if send_email_verification(current_user, verification_token):
+        flash('验证邮件已重新发送，请检查您的邮箱。', 'success')
+    else:
+        flash('邮件发送失败，请重试或联系管理员。', 'danger')
+    
+    return redirect(url_for('user.dashboard' if current_user.user_type == 'user' else 'staff.business_dashboard'))
+
+@auth_bp.route('/verify_code/<int:user_id>', methods=['GET', 'POST'])
+def verify_code(user_id):
+    """验证码验证页面"""
+    user = User.query.get_or_404(user_id)
+    
+    if user.email_verified:
+        flash('您的邮箱已经验证过了', 'info')
+        return redirect(url_for('auth.login'))
+    
+    if request.method == 'POST':
+        verification_code = request.form.get('verification_code', '').strip()
+        
+        if not verification_code:
+            flash('请输入验证码', 'danger')
+            return render_template('auth/verify_code.html', user=user)
+        
+        if len(verification_code) != 6 or not verification_code.isdigit():
+            flash('验证码格式不正确', 'danger')
+            return render_template('auth/verify_code.html', user=user)
+        
+        # 检查验证码
+        if (user.email_verification_code == verification_code and 
+            user.email_verification_code_expires and 
+            user.email_verification_code_expires > datetime.utcnow()):
+            
+            # 验证成功
+            user.email_verified = True
+            user.email_verification_code = None
+            user.email_verification_code_expires = None
+            
+            db.session.commit()
+            
+            # 发送欢迎邮件
+            send_welcome_email(user)
+            
+            flash('邮箱验证成功！欢迎使用我们的服务。', 'success')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('验证码错误或已过期，请重新输入', 'danger')
+            return render_template('auth/verify_code.html', user=user)
+    
+    return render_template('auth/verify_code.html', user=user)
+
+@auth_bp.route('/resend_verification_code', methods=['POST'])
+def resend_verification_code():
+    """重新发送验证码"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'success': False, 'message': '邮箱地址不能为空'})
+        
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'success': False, 'message': '用户不存在'})
+        
+        if user.email_verified:
+            return jsonify({'success': False, 'message': '邮箱已经验证过了'})
+        
+        # 生成新的验证码
+        verification_code = generate_verification_code()
+        code_expires = datetime.utcnow() + timedelta(minutes=5)
+        
+        user.email_verification_code = verification_code
+        user.email_verification_code_expires = code_expires
+        
+        db.session.commit()
+        
+        # 发送验证码邮件
+        if send_verification_code(user, verification_code):
+            return jsonify({'success': True, 'message': '验证码已重新发送'})
+        else:
+            return jsonify({'success': False, 'message': '邮件发送失败，请重试'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': '系统错误，请重试'})
