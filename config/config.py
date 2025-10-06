@@ -81,14 +81,23 @@ LOCAL_CONFIG = {
     'BASE_DIR': 'D:/SoftwareCopyrightMS',
     'USCCC_DIR': 'D:/SoftwareCopyrightMS/USCCC',
     'IDPDF_DIR': 'D:/SoftwareCopyrightMS/IDPDF',
-    'MODEL_DIR': 'D:/SoftwareCopyrightMS/model',
+    'MODEL_DIR': 'D:/SoftwareCopyrightMS/templates',
     'CONTRACT_DIR': 'D:/SoftwareCopyrightMS/model/contract',
     'MATERIAL_DIR': 'D:/SoftwareCopyrightMS/model/material',
     'PROJECT_FILE_DIR': 'D:/SoftwareCopyrightMS/ProjectFile',
     
-    # 网站链接
-    'COMPANY_WEBSITE': 'http://localhost:5000',
-    'COPYRIGHT_CENTER_URL': 'https://www.ccopyright.com.cn',
+    # 网站链接（按要求更改）
+    'COMPANY_WEBSITE': 'http://192.168.31.56:5000',
+    'COPYRIGHT_CENTER_URL': 'https://www.ccopyright.com.cn/',
+
+    # 数据库（MySQL）默认连接信息（仅用于 DB 层，不用于 HTTP API）
+    'SERVER_HOST': '127.0.0.1',  # DB host
+    'SERVER_PORT': 3306,         # DB port
+
+    # Web API（Flask 服务）默认连接信息（桌面端 HTTP 调用）
+    'WEB_API_HOST': 'http://192.168.31.56',
+    'WEB_API_PORT': 5000,
+    'API_BASE': 'http://192.168.31.56:5000',
     
     # 浏览器配置
     'BROWSER_PATH': 'C:/Program Files/Google/Chrome/Application/chrome.exe'

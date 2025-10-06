@@ -11,9 +11,12 @@ from database.models import db, Project, User, Staff, Message
 api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/projects')
-@login_required
 def get_projects():
     """获取项目列表API"""
+    # 检查是否已登录（支持桌面客户端）
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': '请先登录'})
+    
     if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
         return jsonify({'success': False, 'message': '权限不足'})
     

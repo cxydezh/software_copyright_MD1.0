@@ -88,11 +88,8 @@ def reject_to_business(project_id):
     project = Project.query.get_or_404(project_id)
     if project.status != '已确认':
         return jsonify({'success': False, 'message': '仅已确认的项目可以退回业务员'})
-    # 确认者退回需本人且有立项权限；执行者可在未分配执行者时退回
-    if is_approver:
-        if project.confirmer_id != current_user.id:
-            return jsonify({'success': False, 'message': '您不是该项目的确认者，无权退回'})
-    elif is_executor_role:
+    # 执行者可在未分配执行者时退回
+    if is_executor_role:
         if project.executor_id is not None:
             return jsonify({'success': False, 'message': '该项目已分配执行者，无法退回'})
     else:
@@ -137,7 +134,7 @@ def executor_dashboard():
         return redirect(url_for('staff.business_dashboard'))
     
     # 获取分配给我的项目
-    assigned_projects = Project.query.filter_by(executor_id=current_user.id).order_by(Project.execute_time.desc()).all()
+    assigned_projects = Project.query.filter_by(executor_id=current_user.id).filter(Project.status != '已归档').order_by(Project.execute_time.desc()).all()
     
     # 获取待立项的项目（已确认但未分配执行者）
     available_projects = Project.query.filter_by(status='已确认', executor_id=None).order_by(Project.confirm_time.desc()).all()
@@ -526,7 +523,7 @@ def assigned_projects():
         return redirect(url_for('staff.business_dashboard'))
     
     # 获取分配给我的所有项目
-    assigned_projects = Project.query.filter_by(executor_id=current_user.id).order_by(Project.execute_time.desc()).all()
+    assigned_projects = Project.query.filter_by(executor_id=current_user.id).filter(Project.status != '执行中').order_by(Project.execute_time.desc()).all()
     
     return render_template('staff/assigned_projects.html', assigned_projects=assigned_projects)
 
@@ -640,6 +637,8 @@ def apply_business():
             
         except Exception as e:
             db.session.rollback()
+            # 打印全部调试错误信息
+            print(e)
             flash('代客申请提交失败，请重试', 'danger')
     
     return render_template('staff/apply_business.html')

@@ -22,6 +22,7 @@ import sqlite3
 from datetime import datetime
 import threading
 from pathlib import Path
+import traceback
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -152,8 +153,14 @@ class SoftwareCopyrightMS:
                 messagebox.showinfo("连接测试", "服务器连接正常")
             else:
                 messagebox.showwarning("连接测试", f"服务器响应异常: {response.status_code}")
-        except requests.exceptions.ConnectionError:
-            messagebox.showerror("连接测试", "无法连接到服务器，请检查网络连接")
+        except requests.exceptions.ConnectionError as e:
+            error_msg = f"无法连接到服务器: {str(e)}\n\n"
+            error_msg += "可能的原因和解决方案:\n"
+            error_msg += "1. Web服务器未启动 - 请运行 run_web.py 启动服务器\n"
+            error_msg += "2. 服务器端口被占用 - 检查是否已有一个服务器实例在运行\n"
+            error_msg += "3. 防火墙阻止连接 - 检查防火墙设置\n"
+            error_msg += "4. 服务器地址配置错误 - 检查 config/config.py 中的 COMPANY_WEBSITE 配置\n"
+            messagebox.showerror("连接测试", error_msg)
         except requests.exceptions.Timeout:
             messagebox.showerror("连接测试", "连接超时，请稍后重试")
         except Exception as e:

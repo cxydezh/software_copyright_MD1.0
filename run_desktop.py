@@ -6,8 +6,13 @@
 
 import os
 import sys
+import warnings
 import tkinter as tk
 from tkinter import messagebox
+
+# 抑制libpng警告
+warnings.filterwarnings("ignore", ".*iCCP.*")
+os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning'
 
 def check_dependencies():
     """检查依赖项"""
@@ -34,7 +39,7 @@ def main():
     
     try:
         # 导入并启动应用
-        from desktop_app.main import SoftwareCopyrightMS
+        from desktop_app.main_with_login import SoftwareCopyrightMS
         
         print("正在初始化桌面应用...")
         app = SoftwareCopyrightMS()

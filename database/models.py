@@ -63,7 +63,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(50), nullable=False, comment='姓名')
     gender = db.Column(db.Enum('男', '女'), comment='性别')
-    id_number = db.Column(db.String(18), unique=True, comment='身份证号')
+    id_number = db.Column(db.String(18),comment='身份证号')
     birth_date = db.Column(db.Date, comment='出生日期')
     email = db.Column(db.String(100), unique=True, comment='邮箱')
     phone = db.Column(db.String(20), comment='电话')
