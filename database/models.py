@@ -330,6 +330,152 @@ class PatentProject(db.Model):
     def __repr__(self):
         return f'<PatentProject {self.project_name}>'
 
+class ArchivedSoftwareProject(db.Model):
+    """软著相关归档项目表"""
+    __tablename__ = 'archived_software_projects'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    project_name = db.Column(db.String(200), nullable=False, comment='项目名称')
+    project_type = db.Column(db.Enum('软件登记业务', '软件设计与登记业务', '软件部署与登记业务'), 
+                           nullable=False, comment='项目类型')
+    applicant_type = db.Column(db.Enum('个人', '事业单位', '事业单位联合个人', '自然人联合'), 
+                             nullable=False, comment='申请人类型')
+    copyright_owner = db.Column(db.Text, comment='著作权人')
+    software_applicant_name = db.Column(db.String(200), comment='软著申请人名称')
+    serial_number = db.Column(db.String(100), comment='项目流水号')
+    priority = db.Column(db.Enum('普通', '加急', '快速'), default='普通', comment='项目优先级')
+    
+    # 时间字段
+    apply_time = db.Column(db.DateTime, comment='项目申请时间')
+    confirm_time = db.Column(db.DateTime, comment='项目确认时间')
+    execute_time = db.Column(db.DateTime, comment='项目执行时间')
+    complete_time = db.Column(db.DateTime, comment='项目完成时间')
+    settle_time = db.Column(db.DateTime, comment='项目结清时间')
+    submit_time = db.Column(db.DateTime, comment='项目上网提交时间')
+    certificate_time = db.Column(db.DateTime, comment='项目证书完成时间')
+    archive_time = db.Column(db.DateTime, default=datetime.utcnow, comment='归档日期')
+    
+    # 财务字段
+    price = db.Column(db.Numeric(10, 2), comment='项目价目')
+    discount = db.Column(db.Numeric(5, 2), default=0, comment='优惠折扣')
+    
+    # 状态字段
+    is_archived = db.Column(db.Boolean, default=True, comment='是否归档')
+    is_settled = db.Column(db.Boolean, default=True, comment='是否已结清')
+    
+    # 外键
+    applicant_id = db.Column(db.Integer, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, comment='确认者ID')
+    executor_id = db.Column(db.Integer, comment='执行者ID')
+    
+    remarks = db.Column(db.Text, comment='项目备注')
+    
+    def __repr__(self):
+        return f'<ArchivedSoftwareProject {self.project_name}>'
+
+class ArchivedPaperProject(db.Model):
+    """论文相关归档项目表"""
+    __tablename__ = 'archived_paper_projects'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    project_name = db.Column(db.String(200), nullable=False, comment='项目名称')
+    project_type = db.Column(db.Enum('论文指导', '论文发表', '学术咨询'), 
+                           nullable=False, comment='项目类型')
+    service_level = db.Column(db.Enum('基础服务', '标准服务', '高级服务'), 
+                            nullable=False, comment='服务等级')
+    applicant_type = db.Column(db.Enum('个人学者', '医疗机构', '企业研发', '联合申请'), 
+                             nullable=False, comment='申请人类型')
+    
+    # 论文信息
+    paper_title = db.Column(db.String(500), comment='论文标题')
+    research_field = db.Column(db.String(100), comment='研究领域')
+    target_journal = db.Column(db.String(200), comment='目标期刊')
+    paper_status = db.Column(db.Enum('初稿', '修改中', '已投稿', '审稿中', '已录用', '已发表', '被拒稿'), 
+                           comment='论文状态')
+    
+    # 时间管理
+    apply_time = db.Column(db.DateTime, comment='申请时间')
+    confirm_time = db.Column(db.DateTime, comment='确认时间')
+    start_time = db.Column(db.DateTime, comment='开始时间')
+    submit_time = db.Column(db.DateTime, comment='投稿时间')
+    accept_time = db.Column(db.DateTime, comment='录用时间')
+    publish_time = db.Column(db.DateTime, comment='发表时间')
+    archive_time = db.Column(db.DateTime, default=datetime.utcnow, comment='归档日期')
+    
+    # 财务信息
+    price = db.Column(db.Numeric(10, 2), comment='项目价格')
+    discount = db.Column(db.Numeric(5, 2), default=0, comment='优惠折扣')
+    settle_time = db.Column(db.DateTime, comment='结清时间')
+    
+    # 状态管理
+    status = db.Column(db.Enum('待确认', '已确认', '进行中', '已投稿', '审稿中', '已录用', '已发表', '已完成', '已归档'), 
+                      default='已归档', comment='项目状态')
+    is_archived = db.Column(db.Boolean, default=True, comment='是否归档')
+    is_settled = db.Column(db.Boolean, default=True, comment='是否已结清')
+    
+    # 外键关联
+    applicant_id = db.Column(db.Integer, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, comment='确认者ID')
+    executor_id = db.Column(db.Integer, comment='执行者ID')
+    
+    remarks = db.Column(db.Text, comment='项目备注')
+    
+    def __repr__(self):
+        return f'<ArchivedPaperProject {self.project_name}>'
+
+class ArchivedPatentProject(db.Model):
+    """专利相关归档项目表"""
+    __tablename__ = 'archived_patent_projects'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    project_name = db.Column(db.String(200), nullable=False, comment='项目名称')
+    project_type = db.Column(db.Enum('发明专利申请', '实用新型申请', '外观设计申请', '国际申请', '专利保护', '专利管理'), 
+                           nullable=False, comment='项目类型')
+    applicant_type = db.Column(db.Enum('个人发明者', '企业申请', '科研院所', '联合申请'), 
+                             nullable=False, comment='申请人类型')
+    application_field = db.Column(db.Enum('医疗设备', '生物医药', '数字医疗', '其他领域'), 
+                                nullable=False, comment='申请领域')
+    
+    # 专利信息
+    invention_title = db.Column(db.String(500), comment='发明名称')
+    technical_field = db.Column(db.String(100), comment='技术领域')
+    application_number = db.Column(db.String(50), comment='申请号')
+    publication_number = db.Column(db.String(50), comment='公开号')
+    patent_number = db.Column(db.String(50), comment='专利号')
+    patent_status = db.Column(db.Enum('申请中', '公开', '实审', '授权', '维持', '终止', '无效'), 
+                            comment='专利状态')
+    
+    # 时间管理
+    apply_time = db.Column(db.DateTime, comment='申请时间')
+    confirm_time = db.Column(db.DateTime, comment='确认时间')
+    start_time = db.Column(db.DateTime, comment='开始时间')
+    file_time = db.Column(db.DateTime, comment='递交时间')
+    publish_time = db.Column(db.DateTime, comment='公开时间')
+    grant_time = db.Column(db.DateTime, comment='授权时间')
+    archive_time = db.Column(db.DateTime, default=datetime.utcnow, comment='归档日期')
+    
+    # 财务信息
+    price = db.Column(db.Numeric(10, 2), comment='项目价格')
+    discount = db.Column(db.Numeric(5, 2), default=0, comment='优惠折扣')
+    annual_fee = db.Column(db.Numeric(10, 2), comment='年费')
+    settle_time = db.Column(db.DateTime, comment='结清时间')
+    
+    # 状态管理
+    status = db.Column(db.Enum('待确认', '已确认', '准备中', '已递交', '审查中', '已授权', '维持中', '已完成', '已归档'), 
+                      default='已归档', comment='项目状态')
+    is_archived = db.Column(db.Boolean, default=True, comment='是否归档')
+    is_settled = db.Column(db.Boolean, default=True, comment='是否已结清')
+    
+    # 外键关联
+    applicant_id = db.Column(db.Integer, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, comment='确认者ID')
+    executor_id = db.Column(db.Integer, comment='执行者ID')
+    
+    remarks = db.Column(db.Text, comment='项目备注')
+    
+    def __repr__(self):
+        return f'<ArchivedPatentProject {self.project_name}>'
+
 class ProjectFile(db.Model):
     """项目文件表"""
     __tablename__ = 'project_files'

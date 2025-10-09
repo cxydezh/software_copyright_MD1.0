@@ -10,6 +10,7 @@ from tkinter import ttk, messagebox, filedialog
 import os
 import shutil
 from datetime import datetime
+from config.config import LOCAL_CONFIG
 
 
 class MaterialManageModule:
@@ -574,7 +575,7 @@ class MaterialManageModule:
         elif material_type == '合同模板':
             folder_path = self.default_path.get_path('contract_path')
         else:
-            folder_path = LOCAL_CONFIG['BASE_DIR']
+            folder_path = self.default_path.get_base_dir()  # 替代LOCAL_CONFIG['BASE_DIR']
         
         if folder_path and os.path.exists(folder_path):
             os.startfile(folder_path)

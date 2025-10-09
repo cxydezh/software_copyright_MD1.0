@@ -21,6 +21,8 @@ from config.config import LOCAL_CONFIG
 from desktop_app.dialogs import IDCardDialog, USCCCDialog, ContractDialog
 from desktop_app.server_client import ServerClient
 from desktop_app.serial_fetcher import fetch_serial_for_project
+from desktop_app.selection_dialogs import (TemplateSelectionDialog, IDCardFileDialog,
+                                           USCCCFileDialog, ContractFileDialog)
 
 
 class TaskViewModule:
@@ -401,6 +403,11 @@ class TaskViewModule:
         tk.Button(self.handle_frame, text="公司网站", 
                  font=('Microsoft YaHei', 9), bg='#3182ce', fg='white',
                  command=self.open_company_website).pack(side='left', padx=5)
+        
+        # 保存修改按钮（将右侧表单中的修改提交至服务器）
+        tk.Button(self.handle_frame, text="保存修改", 
+                 font=('Microsoft YaHei', 9), bg='#2d3748', fg='white',
+                 command=self.save_project_changes).pack(side='right', padx=5)
     
     def on_status_tree_select(self, event, status_title: str):
         """任一状态树的选中事件"""
@@ -514,30 +521,98 @@ class TaskViewModule:
             messagebox.showerror("错误", f"显示项目详情失败: {str(e)}")
     
     def load_project_files(self, project_id):
-        """加载项目文件列表"""
+        """加载项目文件列表 - 从项目文件夹中读取实际文件"""
         try:
             if not project_id:
                 return
             
-            # 从本地数据库获取项目文件
-            files = self.project_file.get_files_by_project(project_id)
+            # 清空文件列表
+            for item in self.file_tree.get_children():
+                self.file_tree.delete(item)
             
-            for file_info in files:
-                file_name = file_info.get('file_name', '')
-                file_type = file_info.get('file_type', '')
-                file_size = file_info.get('file_size', 0)  # 可能不存在，默认为0
-                created_time = file_info.get('created_time', '')
-                
-                # 格式化文件大小
-                size_str = self.format_file_size(file_size)
-                
-                # 格式化时间
-                time_str = created_time[:19] if created_time else ''
-                
-                self.file_tree.insert('', 'end', values=(file_name, file_type, size_str, time_str))
+            # 获取项目信息
+            project = self.selected_project
+            if not project:
+                return
+            
+            project_name = project.get('project_name', '')
+            
+            # 获取项目文件夹路径
+            base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG.get('PROJECT_FILE_DIR', 'D:/SoftwareCopyrightMS/Projects')
+            project_folder = os.path.join(base_path, f"{project_id}.{project_name}")
+            
+            # 检查项目文件夹是否存在
+            if not os.path.exists(project_folder):
+                print(f"[INFO] 项目文件夹不存在: {project_folder}")
+                return
+            
+            # 遍历项目文件夹中的所有文件
+            file_count = 0
+            for root, dirs, files in os.walk(project_folder):
+                for file_name in files:
+                    file_path = os.path.join(root, file_name)
+                    
+                    # 获取文件信息
+                    file_size = os.path.getsize(file_path)
+                    file_ext = os.path.splitext(file_name)[1].lower()
+                    
+                    # 确定文件类型
+                    file_type = self.get_file_type(file_ext)
+                    
+                    # 获取修改时间
+                    mtime = os.path.getmtime(file_path)
+                    time_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # 格式化文件大小
+                    size_str = self.format_file_size(file_size)
+                    
+                    # 计算相对路径
+                    rel_path = os.path.relpath(file_path, project_folder)
+                    
+                    # 添加到树形控件
+                    self.file_tree.insert('', 'end', values=(
+                        rel_path,      # 文件名（相对路径）
+                        file_type,     # 文件类型
+                        size_str,      # 文件大小
+                        time_str       # 修改时间
+                    ), tags=(file_path,))  # 完整路径存储在tags中
+                    
+                    file_count += 1
+            
+            print(f"[INFO] 加载了 {file_count} 个文件")
                 
         except Exception as e:
             print(f"加载项目文件失败: {str(e)}")
+            traceback.print_exc()
+    
+    def get_file_type(self, file_ext):
+        """根据文件扩展名确定文件类型"""
+        ext_map = {
+            '.pdf': 'PDF文档',
+            '.doc': 'Word文档',
+            '.docx': 'Word文档',
+            '.xls': 'Excel表格',
+            '.xlsx': 'Excel表格',
+            '.txt': '文本文件',
+            '.py': 'Python源码',
+            '.java': 'Java源码',
+            '.cpp': 'C++源码',
+            '.c': 'C源码',
+            '.h': '头文件',
+            '.js': 'JavaScript',
+            '.html': 'HTML文件',
+            '.css': 'CSS文件',
+            '.sql': 'SQL脚本',
+            '.zip': '压缩文件',
+            '.rar': '压缩文件',
+            '.7z': '压缩文件',
+            '.png': '图片文件',
+            '.jpg': '图片文件',
+            '.jpeg': '图片文件',
+            '.gif': '图片文件',
+            '.bmp': '图片文件',
+        }
+        return ext_map.get(file_ext, '其他文件')
     
     def format_file_size(self, size_bytes):
         """格式化文件大小"""
@@ -574,11 +649,31 @@ class TaskViewModule:
         """打开文件"""
         try:
             selection = self.file_tree.selection()
-            if selection:
-                item = self.file_tree.item(selection[0])
-                file_name = item['values'][0]
-                # 这里应该实现打开文件的逻辑
-                messagebox.showinfo("提示", f"打开文件: {file_name}")
+            if not selection:
+                return
+            
+            item = self.file_tree.item(selection[0])
+            tags = item.get('tags', ())
+            
+            if not tags:
+                messagebox.showwarning("警告", "无法获取文件路径")
+                return
+            
+            file_path = tags[0]  # 完整路径存储在第一个tag中
+            
+            if not os.path.exists(file_path):
+                messagebox.showerror("错误", f"文件不存在：{file_path}")
+                return
+            
+            # 使用系统默认程序打开文件
+            import subprocess
+            if sys.platform == 'win32':
+                os.startfile(file_path)
+            elif sys.platform == 'darwin':  # macOS
+                subprocess.run(['open', file_path])
+            else:  # Linux
+                subprocess.run(['xdg-open', file_path])
+                
         except Exception as e:
             messagebox.showerror("错误", f"打开文件失败: {str(e)}")
     
@@ -586,11 +681,38 @@ class TaskViewModule:
         """打开文件所在文件夹"""
         try:
             selection = self.file_tree.selection()
-            if selection:
-                item = self.file_tree.item(selection[0])
-                file_name = item['values'][0]
-                # 这里应该实现打开文件夹的逻辑
-                messagebox.showinfo("提示", f"打开文件夹: {file_name}")
+            if not selection:
+                return
+            
+            item = self.file_tree.item(selection[0])
+            tags = item.get('tags', ())
+            
+            if not tags:
+                messagebox.showwarning("警告", "无法获取文件路径")
+                return
+            
+            file_path = tags[0]
+            
+            if not os.path.exists(file_path):
+                messagebox.showerror("错误", f"文件不存在：{file_path}")
+                return
+            
+            # 获取文件所在目录
+            folder_path = os.path.dirname(file_path)
+            
+            # 使用系统文件管理器打开文件夹并选中文件
+            import subprocess
+            if sys.platform == 'win32':
+                # 规范化 Windows 路径并正确传递给 explorer
+                normalized_path = os.path.normpath(os.path.realpath(file_path))
+                # 注意：/select, 与路径需要作为同一个参数传递，且路径需要加引号
+                cmd = f'explorer /select,"{normalized_path}"'
+                subprocess.run(cmd, shell=True)
+            elif sys.platform == 'darwin':  # macOS
+                subprocess.run(['open', '-R', file_path])
+            else:  # Linux
+                subprocess.run(['xdg-open', folder_path])
+                
         except Exception as e:
             messagebox.showerror("错误", f"打开文件夹失败: {str(e)}")
     
@@ -598,14 +720,38 @@ class TaskViewModule:
         """删除文件"""
         try:
             selection = self.file_tree.selection()
-            if selection:
-                item = self.file_tree.item(selection[0])
-                file_name = item['values'][0]
+            if not selection:
+                return
+            
+            item = self.file_tree.item(selection[0])
+            file_name = item['values'][0]
+            tags = item.get('tags', ())
+            
+            if not tags:
+                messagebox.showwarning("警告", "无法获取文件路径")
+                return
+            
+            file_path = tags[0]
+            
+            if not os.path.exists(file_path):
+                messagebox.showerror("错误", f"文件不存在：{file_path}")
+                return
+            
+            # 确认删除
+            response = messagebox.askyesno(
+                "确认删除", 
+                f"确定要删除文件吗？\n\n{file_name}\n\n此操作不可恢复！"
+            )
+            
+            if response:
+                # 删除文件
+                os.remove(file_path)
                 
-                if messagebox.askyesno("确认", f"确定要删除文件 {file_name} 吗？"):
-                    # 这里应该实现删除文件的逻辑
-                    self.file_tree.delete(selection[0])
-                    messagebox.showinfo("成功", "文件删除成功")
+                # 从树形控件中移除
+                self.file_tree.delete(selection[0])
+                
+                messagebox.showinfo("成功", "文件已删除")
+                
         except Exception as e:
             messagebox.showerror("错误", f"删除文件失败: {str(e)}")
     
@@ -628,23 +774,130 @@ class TaskViewModule:
         except Exception as e:
             messagebox.showerror("错误", f"检索项目失败: {str(e)}")
     
+    def _collect_project_form_values(self):
+        """从右侧表单收集项目字段值，返回dict（仅包含可编辑字段）。"""
+        values = {}
+        def get_text(name):
+            w = self.info_entries.get(name)
+            if not w:
+                return ''
+            try:
+                if isinstance(w, tk.Text):
+                    return w.get('1.0', tk.END).strip()
+                return w.get().strip()
+            except Exception:
+                return ''
+        
+        # 映射表单字段到数据库列名
+        field_mapping = {
+            'project_name': 'project_name',
+            'project_type': 'project_type', 
+            'applicant_type': 'applicant_type',
+            'software_applicant_name': 'software_applicant_name',
+            'priority': 'priority',
+            'status': 'status',
+            'remarks': 'remarks',
+            'serial_number': 'serial_number',
+            'applicant_name': 'software_applicant_name'  # 表单中的applicant_name对应数据库的software_applicant_name
+            # 注意：executor_name 暂时不映射，因为数据库中是 executor_id (INTEGER)，而表单中是文本
+        }
+        
+        for form_field, db_field in field_mapping.items():
+            text_value = get_text(form_field)
+            if text_value:  # 只添加非空值
+                values[db_field] = text_value
+        
+        return values
+    
+    def save_project_changes(self):
+        """保存当前选中项目的修改到服务器（若可用），并回落更新本地。"""
+        try:
+            if not self.selected_project:
+                messagebox.showwarning("提示", "请先在左侧选择一个项目")
+                return
+            project_id = self.selected_project.get('id')
+            if not project_id:
+                messagebox.showwarning("提示", "当前项目缺少ID，无法保存")
+                return
+            
+            payload = self._collect_project_form_values()
+            if not payload:
+                messagebox.showinfo("提示", "没有需要保存的修改")
+                return
+            
+            # 优先尝试服务器更新
+            server_ok = False
+            server_msg = ''
+            if self.server_client and hasattr(self.server_client, 'update_project_fields'):
+                try:
+                    # 期望 ServerClient.update_project_fields(project_id, payload: dict) -> (ok, msg)
+                    ok, msg = self.server_client.update_project_fields(project_id, payload)
+                    server_ok = bool(ok)
+                    server_msg = msg or ''
+                except Exception as e:
+                    traceback.print_exc()
+                    server_ok = False
+                    server_msg = str(e)
+            
+            # 回落：更新本地缓存与本地数据库
+            if hasattr(self, 'local_project') and self.local_project:
+                try:
+                    # 仅更新本地表中存在的字段
+                    self.local_project.update_project(project_id, **payload)
+                except Exception:
+                    traceback.print_exc()
+            try:
+                # 更新内存对象，保持UI与数据同步
+                for k, v in payload.items():
+                    self.selected_project[k] = v
+            except Exception:
+                pass
+            
+            if server_ok:
+                messagebox.showinfo("保存修改", "已成功保存到服务器并更新本地")
+            else:
+                msg = "已保存到本地，服务器未同步\n"
+                if server_msg:
+                    msg += f"原因：{server_msg}"
+                messagebox.showwarning("保存修改", msg)
+        except Exception as e:
+            traceback.print_exc()
+            messagebox.showerror("错误", f"保存失败: {str(e)}")
+    
     def show_id_card_dialog(self):
         """显示身份证复印件对话框"""
         try:
-            # 创建对话框
-            dialog = tk.Toplevel(self.main_frame)
-            dialog.title("身份证复印件文件列表")
-            dialog.geometry("600x400")
-            dialog.transient(self.main_frame)
-            dialog.grab_set()
+            # 获取目标文件夹
+            target_folder = None
+            if self.selected_project:
+                project_id = self.selected_project.get('id', '')
+                project_name = self.selected_project.get('project_name', '')
+                base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG.get('PROJECT_FILE_DIR', 'D:/SoftwareCopyrightMS/Projects')
+                target_folder = os.path.join(base_path, f"{project_id}.{project_name}")
+                
+                # 确保目标文件夹存在
+                if not os.path.exists(target_folder):
+                    response = messagebox.askyesno("提示", "项目文件夹不存在，是否先创建项目文件夹？")
+                    if response:
+                        self.create_project_folder()
+                        return
+                    else:
+                        target_folder = None
             
-            # 文件列表
-            tk.Label(dialog, text="身份证复印件文件列表", 
-                    font=('Microsoft YaHei', 12, 'bold')).pack(pady=10)
+            # 打开身份证复印件选择对话框
+            dialog = IDCardFileDialog(
+                self.main_frame,
+                self.id_card_file,
+                target_folder=target_folder
+            )
             
-            # 这里应该实现显示身份证文件的逻辑
-            tk.Label(dialog, text="身份证文件列表功能待实现", 
-                    font=('Microsoft YaHei', 10)).pack(pady=20)
+            result = dialog.show()
+            
+            if result:
+                messagebox.showinfo("成功", f"文件已添加到项目")
+                # 刷新项目文件列表
+                if self.selected_project:
+                    self.display_project_details(self.selected_project)
             
         except Exception as e:
             messagebox.showerror("错误", f"显示身份证对话框失败: {str(e)}")
@@ -652,20 +905,37 @@ class TaskViewModule:
     def show_usccc_dialog(self):
         """显示统一社会信用代码证书对话框"""
         try:
-            # 创建对话框
-            dialog = tk.Toplevel(self.main_frame)
-            dialog.title("统一社会信用代码证书文件列表")
-            dialog.geometry("600x400")
-            dialog.transient(self.main_frame)
-            dialog.grab_set()
+            # 获取目标文件夹
+            target_folder = None
+            if self.selected_project:
+                project_id = self.selected_project.get('id', '')
+                project_name = self.selected_project.get('project_name', '')
+                base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG.get('PROJECT_FILE_DIR', 'D:/SoftwareCopyrightMS/Projects')
+                target_folder = os.path.join(base_path, f"{project_id}.{project_name}")
+                
+                # 确保目标文件夹存在
+                if not os.path.exists(target_folder):
+                    response = messagebox.askyesno("提示", "项目文件夹不存在，是否先创建项目文件夹？")
+                    if response:
+                        self.create_project_folder()
+                        return
+                    else:
+                        target_folder = None
             
-            # 文件列表
-            tk.Label(dialog, text="统一社会信用代码证书文件列表", 
-                    font=('Microsoft YaHei', 12, 'bold')).pack(pady=10)
+            # 打开统一社会信用代码证书选择对话框
+            dialog = USCCCFileDialog(
+                self.main_frame,
+                self.usccc_file,
+                target_folder=target_folder
+            )
             
-            # 这里应该实现显示证书文件的逻辑
-            tk.Label(dialog, text="证书文件列表功能待实现", 
-                    font=('Microsoft YaHei', 10)).pack(pady=20)
+            result = dialog.show()
+            
+            if result:
+                messagebox.showinfo("成功", f"文件已添加到项目")
+                # 刷新项目文件列表
+                if self.selected_project:
+                    self.display_project_details(self.selected_project)
             
         except Exception as e:
             messagebox.showerror("错误", f"显示证书对话框失败: {str(e)}")
@@ -673,20 +943,37 @@ class TaskViewModule:
     def show_contract_dialog(self):
         """显示合同文件对话框"""
         try:
-            # 创建对话框
-            dialog = tk.Toplevel(self.main_frame)
-            dialog.title("合同文件列表")
-            dialog.geometry("600x400")
-            dialog.transient(self.main_frame)
-            dialog.grab_set()
+            # 获取目标文件夹
+            target_folder = None
+            if self.selected_project:
+                project_id = self.selected_project.get('id', '')
+                project_name = self.selected_project.get('project_name', '')
+                base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG.get('PROJECT_FILE_DIR', 'D:/SoftwareCopyrightMS/Projects')
+                target_folder = os.path.join(base_path, f"{project_id}.{project_name}")
+                
+                # 确保目标文件夹存在
+                if not os.path.exists(target_folder):
+                    response = messagebox.askyesno("提示", "项目文件夹不存在，是否先创建项目文件夹？")
+                    if response:
+                        self.create_project_folder()
+                        return
+                    else:
+                        target_folder = None
             
-            # 文件列表
-            tk.Label(dialog, text="合同文件列表", 
-                    font=('Microsoft YaHei', 12, 'bold')).pack(pady=10)
+            # 打开合同文件选择对话框
+            dialog = ContractFileDialog(
+                self.main_frame,
+                self.contract_file,
+                target_folder=target_folder
+            )
             
-            # 这里应该实现显示合同文件的逻辑
-            tk.Label(dialog, text="合同文件列表功能待实现", 
-                    font=('Microsoft YaHei', 10)).pack(pady=20)
+            result = dialog.show()
+            
+            if result:
+                messagebox.showinfo("成功", f"文件已添加到项目")
+                # 刷新项目文件列表
+                if self.selected_project:
+                    self.display_project_details(self.selected_project)
             
         except Exception as e:
             messagebox.showerror("错误", f"显示合同对话框失败: {str(e)}")
@@ -803,7 +1090,7 @@ class TaskViewModule:
             print(f"刷新模板列表失败: {str(e)}")
     
     def create_project_folder(self):
-        """创建项目文件夹"""
+        """创建项目文件夹 - 使用模板选择对话框"""
         if not self.selected_project:
             messagebox.showwarning("警告", "请先选择一个项目")
             return
@@ -812,17 +1099,29 @@ class TaskViewModule:
             project_name = self.selected_project.get('project_name', 'Unknown')
             project_id = self.selected_project.get('id', 'Unknown')
             
-            # 创建项目文件夹
-            folder_name = f"{project_id}_{project_name}"
-            base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG['PROJECT_FILE_DIR']
-            project_path = os.path.join(base_path, folder_name)
+            # 获取项目文件夹基础路径
+            base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG.get('PROJECT_FILE_DIR', 'D:/SoftwareCopyrightMS/Projects')
             
-            if not os.path.exists(project_path):
-                os.makedirs(project_path)
-                messagebox.showinfo("成功", f"项目文件夹已创建: {project_path}")
-            else:
-                messagebox.showinfo("提示", f"项目文件夹已存在: {project_path}")
-                
+            # 确保基础路径存在
+            if not os.path.exists(base_path):
+                os.makedirs(base_path)
+            
+            # 打开模板选择对话框
+            dialog = TemplateSelectionDialog(
+                self.main_frame,
+                self.template_file,
+                project_id=project_id,
+                project_name=project_name,
+                target_folder=base_path
+            )
+            
+            result = dialog.show()
+            
+            if result:
+                messagebox.showinfo("成功", f"项目文件夹已创建: {result}")
+                # 刷新项目详情显示
+                self.display_project_details(self.selected_project)
+            
         except Exception as e:
             messagebox.showerror("错误", f"创建项目文件夹失败: {str(e)}")
     
@@ -854,63 +1153,64 @@ class TaskViewModule:
         except Exception as e:
             messagebox.showerror("错误", f"更新项目状态失败: {str(e)}")
     
-    def select_id_card(self):
-        """选择身份证文件"""
-        if not self.selected_project:
-            messagebox.showwarning("警告", "请先选择一个项目")
-            return
-        
-        try:
-            dialog = IDCardDialog(self.main_frame, self.id_card_file, self.selected_project)
-            self.main_frame.wait_window(dialog.dialog)
-            
-            if dialog.selected_file:
-                messagebox.showinfo("成功", f"已选择身份证文件: {dialog.selected_file}")
-        except Exception as e:
-            messagebox.showerror("错误", f"选择身份证文件失败: {str(e)}")
-    
-    def select_usccc(self):
-        """选择统一社会信用代码证书文件"""
-        if not self.selected_project:
-            messagebox.showwarning("警告", "请先选择一个项目")
-            return
-        
-        try:
-            dialog = USCCCDialog(self.main_frame, self.usccc_file, self.selected_project)
-            self.main_frame.wait_window(dialog.dialog)
-            
-            if dialog.selected_file:
-                messagebox.showinfo("成功", f"已选择证书文件: {dialog.selected_file}")
-        except Exception as e:
-            messagebox.showerror("错误", f"选择证书文件失败: {str(e)}")
-    
-    def select_contract(self):
-        """选择合同文件"""
-        if not self.selected_project:
-            messagebox.showwarning("警告", "请先选择一个项目")
-            return
     def fetch_serial_number(self):
         """获取流水号（占位实现，可扩展为从网页解析或API获取）"""
         if not self.selected_project:
             messagebox.showwarning("警告", "请先选择一个项目")
             return
-        try:
-            name = self.selected_project.get('project_name') if isinstance(self.selected_project, dict) else self.selected_project.get('project_name')
-            applicant = self.selected_project.get('software_applicant_name') if isinstance(self.selected_project, dict) else None
-            serial = fetch_serial_for_project(name, applicant)
-            if serial:
-                messagebox.showinfo("获取流水号", f"已获取流水号: {serial}")
-                # TODO: 回填到本地与服务器（如需）
-            else:
-                messagebox.showwarning("获取流水号", "未能从页面提取到流水号，请确认页面已显示相关内容。")
-        except Exception as e:
-            messagebox.showerror("错误", f"获取流水号失败: {str(e)}")
         
         try:
-            dialog = ContractDialog(self.main_frame, self.contract_file, self.selected_project)
-            self.main_frame.wait_window(dialog.dialog)
+            # 1) 读取当前项目关键信息
+            project_id = self.selected_project.get('id')
+            project_name = self.selected_project.get('project_name')
+            applicant_name = self.selected_project.get('software_applicant_name')
             
-            if dialog.selected_file:
-                messagebox.showinfo("成功", f"已选择合同文件: {dialog.selected_file}")
+            if not project_name:
+                messagebox.showwarning("提示", "当前项目缺少项目名称，无法匹配网页上的项目记录")
+                return
+            
+            # 2) 通过已登录的浏览器页面抓取流水号（用户需事先在版权中心登录并进入用户中心）
+            serial = fetch_serial_for_project(project_name, applicant_name)
+            
+            if not serial:
+                messagebox.showwarning(
+                    "获取流水号",
+                    "未在当前网页中找到匹配的项目，请确认已登录版权保护中心并进入用户中心，且页面包含该项目。"
+                )
+                return
+            
+            # 3) 回填到界面
+            if 'serial_number' in self.info_entries:
+                try:
+                    self.info_entries['serial_number'].delete(0, tk.END)
+                    self.info_entries['serial_number'].insert(0, str(serial))
+                except Exception:
+                    pass
+            
+            # 同步更新到内存选中项目
+            try:
+                self.selected_project['serial_number'] = serial
+            except Exception:
+                pass
+            
+            # 4) 更新到服务器（如可用）
+            server_updated = False
+            if self.server_client and hasattr(self.server_client, 'update_project_serial'):
+                try:
+                    ok, msg = self.server_client.update_project_serial(project_id, serial)
+                    server_updated = bool(ok)
+                except Exception:
+                    traceback.print_exc()
+                    server_updated = False
+            
+            # 5) 结果提示
+            if server_updated:
+                messagebox.showinfo("获取流水号", f"流水号已获取并同步：{serial}")
+            else:
+                messagebox.showinfo(
+                    "获取流水号",
+                    f"流水号已获取并回填：{serial}。服务器同步未完成或接口不可用，可稍后再试。"
+                )
         except Exception as e:
-            messagebox.showerror("错误", f"选择合同文件失败: {str(e)}")
+            traceback.print_exc()
+            messagebox.showerror("错误", f"获取流水号失败: {str(e)}")

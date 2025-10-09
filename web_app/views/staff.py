@@ -642,3 +642,13 @@ def apply_business():
             flash('代客申请提交失败，请重试', 'danger')
     
     return render_template('staff/apply_business.html')
+
+@staff_bp.route('/project_query')
+@login_required
+def project_query():
+    """项目查询页面"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    
+    return render_template('staff/project_query.html')

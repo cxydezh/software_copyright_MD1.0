@@ -29,7 +29,8 @@ class LocalDatabase:
                 path_type TEXT UNIQUE NOT NULL,
                 path_value TEXT NOT NULL,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_time TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                recurrent_copy_time TEXT
             )
         ''')
         
@@ -45,7 +46,8 @@ class LocalDatabase:
                 id_number TEXT,
                 remarks TEXT,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_time TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                recurrent_copy_time TEXT
             )
         ''')
         
@@ -60,7 +62,8 @@ class LocalDatabase:
                 legal_representative TEXT,
                 remarks TEXT,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_time TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                recurrent_copy_time TEXT
             )
         ''')
         
@@ -74,7 +77,8 @@ class LocalDatabase:
                 participant_type TEXT,
                 remarks TEXT,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_time TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                recurrent_copy_time TEXT
             )
         ''')
         
@@ -90,7 +94,8 @@ class LocalDatabase:
                 programming_type TEXT,
                 remarks TEXT,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_time TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                recurrent_copy_time TEXT
             )
         ''')
         
@@ -105,7 +110,8 @@ class LocalDatabase:
                 file_size INTEGER DEFAULT 0,
                 remarks TEXT,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_time TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                recurrent_copy_time TEXT
             )
         ''')
         
@@ -124,7 +130,8 @@ class LocalDatabase:
                 executor_id INTEGER,
                 remarks TEXT,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_time TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
+                recurrent_copy_time TEXT
             )
         ''')
         
@@ -278,11 +285,14 @@ class USCCCFile:
     
     def update_file(self, file_id, **kwargs):
         """更新文件信息"""
+        if not kwargs:
+            return
+        
         set_clause = ", ".join([f"{k} = ?" for k in kwargs.keys()])
-        values = list(kwargs.values()) + [file_id]
+        values = list(kwargs.values()) + [datetime.now().isoformat(), file_id]
         self.db.execute_update(
             f"UPDATE usccc_files SET {set_clause}, updated_time = ? WHERE id = ?",
-            values + [datetime.now().isoformat()]
+            values
         )
     
     def delete_file(self, file_id):
@@ -328,11 +338,14 @@ class ContractFile:
     
     def update_file(self, file_id, **kwargs):
         """更新文件信息"""
+        if not kwargs:
+            return
+        
         set_clause = ", ".join([f"{k} = ?" for k in kwargs.keys()])
-        values = list(kwargs.values()) + [file_id]
+        values = list(kwargs.values()) + [datetime.now().isoformat(), file_id]
         self.db.execute_update(
             f"UPDATE contract_files SET {set_clause}, updated_time = ? WHERE id = ?",
-            values + [datetime.now().isoformat()]
+            values
         )
     
     def delete_file(self, file_id):
@@ -388,11 +401,14 @@ class TemplateFolder:
     
     def update_folder(self, folder_id, **kwargs):
         """更新文件信息"""
+        if not kwargs:
+            return
+        
         set_clause = ", ".join([f"{k} = ?" for k in kwargs.keys()])
-        values = list(kwargs.values()) + [folder_id]
+        values = list(kwargs.values()) + [datetime.now().isoformat(), folder_id]
         self.db.execute_update(
             f"UPDATE template_folders SET {set_clause}, updated_time = ? WHERE id = ?",
-            values + [datetime.now().isoformat()]
+            values
         )
     
     def delete_folder(self, folder_id):
@@ -438,11 +454,14 @@ class ProjectFile:
     
     def update_file(self, file_id, **kwargs):
         """更新文件信息"""
+        if not kwargs:
+            return
+        
         set_clause = ", ".join([f"{k} = ?" for k in kwargs.keys()])
-        values = list(kwargs.values()) + [file_id]
+        values = list(kwargs.values()) + [datetime.now().isoformat(), file_id]
         self.db.execute_update(
             f"UPDATE project_files SET {set_clause}, updated_time = ? WHERE id = ?",
-            values + [datetime.now().isoformat()]
+            values
         )
     
     def delete_file(self, file_id):

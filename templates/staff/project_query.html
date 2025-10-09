@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}项目查询 - 软著管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-search"></i> 项目查询与检索
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- 搜索栏 -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input type="text" id="searchKeyword" class="form-control" 
+                                       placeholder="输入项目名称、著作权人、流水号等关键词搜索...">
+                                <select id="projectTypeFilter" class="form-select" style="max-width: 200px;">
+                                    <option value="all">所有类型</option>
+                                    <option value="software">软件著作权</option>
+                                    <option value="paper">论文项目</option>
+                                    <option value="patent">专利项目</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="searchProjects()">
+                                    <i class="fas fa-search"></i> 搜索
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="includeArchived" checked>
+                                <label class="form-check-label" for="includeArchived">
+                                    包含已归档项目
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 切换 -->
+                    <ul class="nav nav-tabs mb-3" id="projectTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="active-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#active" type="button" role="tab">
+                                未归档项目
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="archived-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#archived" type="button" role="tab">
+                                已归档项目
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab 内容 -->
+                    <div class="tab-content" id="projectTabsContent">
+                        <!-- 未归档项目 -->
+                        <div class="tab-pane fade show active" id="active" role="tabpanel">
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <select id="statusFilter" class="form-select" style="max-width: 200px;" 
+                                            onchange="loadActiveProjects()">
+                                        <option value="all">所有状态</option>
+                                        <option value="待确认">待确认</option>
+                                        <option value="已确认">已确认</option>
+                                        <option value="已立项">已立项</option>
+                                        <option value="执行中">执行中</option>
+                                        <option value="已完成">已完成</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div id="activeProjectsContainer">
+                                <!-- 软著项目 -->
+                                <h5 class="mt-4">软件著作权项目</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>项目名称</th>
+                                                <th>著作权人</th>
+                                                <th>流水号</th>
+                                                <th>状态</th>
+                                                <th>申请时间</th>
+                                                <th>价格</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="softwareProjectsTable">
+                                            <tr><td colspan="8" class="text-center">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- 论文项目 -->
+                                <h5 class="mt-4">论文项目</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>项目名称</th>
+                                                <th>论文标题</th>
+                                                <th>目标期刊</th>
+                                                <th>状态</th>
+                                                <th>申请时间</th>
+                                                <th>价格</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="paperProjectsTable">
+                                            <tr><td colspan="8" class="text-center">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- 专利项目 -->
+                                <h5 class="mt-4">专利项目</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>项目名称</th>
+                                                <th>发明名称</th>
+                                                <th>专利号</th>
+                                                <th>状态</th>
+                                                <th>申请时间</th>
+                                                <th>价格</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="patentProjectsTable">
+                                            <tr><td colspan="8" class="text-center">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 已归档项目 -->
+                        <div class="tab-pane fade" id="archived" role="tabpanel">
+                            <div id="archivedProjectsContainer">
+                                <!-- 软著归档项目 -->
+                                <h5 class="mt-4">软件著作权归档项目</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>项目名称</th>
+                                                <th>著作权人</th>
+                                                <th>流水号</th>
+                                                <th>归档时间</th>
+                                                <th>价格</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="archivedSoftwareTable">
+                                            <tr><td colspan="6" class="text-center">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- 论文归档项目 -->
+                                <h5 class="mt-4">论文归档项目</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>项目名称</th>
+                                                <th>论文标题</th>
+                                                <th>目标期刊</th>
+                                                <th>归档时间</th>
+                                                <th>价格</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="archivedPaperTable">
+                                            <tr><td colspan="6" class="text-center">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- 专利归档项目 -->
+                                <h5 class="mt-4">专利归档项目</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>项目名称</th>
+                                                <th>发明名称</th>
+                                                <th>专利号</th>
+                                                <th>归档时间</th>
+                                                <th>价格</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="archivedPatentTable">
+                                            <tr><td colspan="6" class="text-center">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 页面加载时获取项目数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadActiveProjects();
+    loadArchivedProjects();
+});
+
+// 加载未归档项目
+function loadActiveProjects() {
+    const status = document.getElementById('statusFilter').value;
+    const type = document.getElementById('projectTypeFilter').value;
+    
+    fetch(`/api/query/projects?type=${type}&status=${status}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayActiveProjects(data.data);
+            } else {
+                console.error('加载失败:', data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// 加载归档项目
+function loadArchivedProjects() {
+    const type = document.getElementById('projectTypeFilter').value;
+    
+    fetch(`/api/query/archived?type=${type}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayArchivedProjects(data.data);
+            } else {
+                console.error('加载失败:', data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// 显示未归档项目
+function displayActiveProjects(data) {
+    // 软著项目
+    const softwareTable = document.getElementById('softwareProjectsTable');
+    if (data.software && data.software.length > 0) {
+        softwareTable.innerHTML = data.software.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.project_name}</td>
+                <td>${p.copyright_owner || '-'}</td>
+                <td>${p.serial_number || '-'}</td>
+                <td><span class="badge bg-info">${p.status}</span></td>
+                <td>${p.apply_time || '-'}</td>
+                <td>¥${p.price}</td>
+                <td>
+                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'software\', ' + p.id + ')">归档</button>' : '未结算'}
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        softwareTable.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无数据</td></tr>';
+    }
+    
+    // 论文项目
+    const paperTable = document.getElementById('paperProjectsTable');
+    if (data.paper && data.paper.length > 0) {
+        paperTable.innerHTML = data.paper.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.project_name}</td>
+                <td>${p.paper_title || '-'}</td>
+                <td>${p.target_journal || '-'}</td>
+                <td><span class="badge bg-info">${p.status}</span></td>
+                <td>${p.apply_time || '-'}</td>
+                <td>¥${p.price}</td>
+                <td>
+                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'paper\', ' + p.id + ')">归档</button>' : '未结算'}
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        paperTable.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无数据</td></tr>';
+    }
+    
+    // 专利项目
+    const patentTable = document.getElementById('patentProjectsTable');
+    if (data.patent && data.patent.length > 0) {
+        patentTable.innerHTML = data.patent.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.project_name}</td>
+                <td>${p.invention_title || '-'}</td>
+                <td>${p.patent_number || '-'}</td>
+                <td><span class="badge bg-info">${p.status}</span></td>
+                <td>${p.apply_time || '-'}</td>
+                <td>¥${p.price}</td>
+                <td>
+                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'patent\', ' + p.id + ')">归档</button>' : '未结算'}
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        patentTable.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无数据</td></tr>';
+    }
+}
+
+// 显示归档项目
+function displayArchivedProjects(data) {
+    // 软著归档
+    const archivedSoftwareTable = document.getElementById('archivedSoftwareTable');
+    if (data.software && data.software.length > 0) {
+        archivedSoftwareTable.innerHTML = data.software.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.project_name}</td>
+                <td>${p.copyright_owner || '-'}</td>
+                <td>${p.serial_number || '-'}</td>
+                <td>${p.archive_time || '-'}</td>
+                <td>¥${p.price}</td>
+            </tr>
+        `).join('');
+    } else {
+        archivedSoftwareTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无归档数据</td></tr>';
+    }
+    
+    // 论文归档
+    const archivedPaperTable = document.getElementById('archivedPaperTable');
+    if (data.paper && data.paper.length > 0) {
+        archivedPaperTable.innerHTML = data.paper.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.project_name}</td>
+                <td>${p.paper_title || '-'}</td>
+                <td>${p.target_journal || '-'}</td>
+                <td>${p.archive_time || '-'}</td>
+                <td>¥${p.price}</td>
+            </tr>
+        `).join('');
+    } else {
+        archivedPaperTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无归档数据</td></tr>';
+    }
+    
+    // 专利归档
+    const archivedPatentTable = document.getElementById('archivedPatentTable');
+    if (data.patent && data.patent.length > 0) {
+        archivedPatentTable.innerHTML = data.patent.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.project_name}</td>
+                <td>${p.invention_title || '-'}</td>
+                <td>${p.patent_number || '-'}</td>
+                <td>${p.archive_time || '-'}</td>
+                <td>¥${p.price}</td>
+            </tr>
+        `).join('');
+    } else {
+        archivedPatentTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无归档数据</td></tr>';
+    }
+}
+
+// 搜索项目
+function searchProjects() {
+    const keyword = document.getElementById('searchKeyword').value.trim();
+    const type = document.getElementById('projectTypeFilter').value;
+    const includeArchived = document.getElementById('includeArchived').checked;
+    
+    if (!keyword) {
+        alert('请输入搜索关键词');
+        return;
+    }
+    
+    fetch(`/api/query/search?keyword=${encodeURIComponent(keyword)}&type=${type}&include_archived=${includeArchived}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayActiveProjects(data.data.active);
+                if (includeArchived) {
+                    displayArchivedProjects(data.data.archived);
+                }
+            } else {
+                alert('搜索失败: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// 归档项目
+function archiveProject(type, id) {
+    if (!confirm('确定要归档此项目吗？归档后项目将移至归档表。')) {
+        return;
+    }
+    
+    fetch(`/api/query/archive/${type}/${id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            loadActiveProjects();
+            loadArchivedProjects();
+        } else {
+            alert('归档失败: ' + data.message);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}
+

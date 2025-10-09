@@ -1,4 +1,4 @@
-郑州医企创医疗科技有限公司网站及其软著管理系统需求分析与设计
+
  
 1	总体功能需求
 该产品主要为面向郑州医企创医疗科技有限公司的实际项目需求设计开发的一款系统软件。主要实现3大功能模块——公司业务展示模块、业务管理模块、文件管理模块。
@@ -41,6 +41,7 @@ MySQL
 5.	项目执行者将项目完成以后，普通业务员可以看到项目执行完毕的状态提示。
 6.	提供用户支付已完成的信息标注功能。
 7.	提供将项目流程结束的功能，将项目流程归档。
+8.	提供项目的查询和检索功能，可以检索未归档的项目和已归档的项目。
 2.3.4	公司项目执行者
 1.	项目执行者的功能在普通业务员功能的基础上还有将项目流程状态修改已完成的功能。
 2.	提供专有的应用模块方便实现文件管理功能。
@@ -52,24 +53,27 @@ MySQL
 4.	提供基于本地文件的模板套餐。
 5.	可以通过选择本地模版套餐自动生成项目申请的初始化项目文件。
 6.	提供本地素材库用于分类存放相关证件，如身份证、统一社会信用代码证书、营业执照。
+7.	可以提前编写项目文件，以备以后使用。当有用户申请项目时可以直接向用户提供项目文件，节约时间。
 2.4	项目流程
 2.4.1	用户提交申请
 用户可以通过2种方式提出项目申请：
 1.	门户网站：通过在公司网站注册账号，主动提出项目申请。
 2.	线下业务员：通过业务员进行项目申请，也就是直接进入项目员确认申请阶段。
 2.4.2	普通业务员确认申请
-该步骤主要用户普通项目员对门户网站的项目进行整理、编辑，确认以后提交给执行者进行项目编辑。
-2.4.3	项目执行者完成任务
-项目执行者根据用户的需求进行项目的开发。
-2.4.4	提交项目到保护中心
+该步骤主要用户普通项目员对门户网站的项目进行整理、编辑，确认以后提交给执行者进行项目编辑。业务员在进行项目确认的时候，如果遇到用户申请信息有问题应该有“驳回“的选项，同时返回修改意见。用户完善相关信息后，可以选择“重新申请”或“取消申请”。
+2.4.3	项目执行者立项
+项目执行者进行项目的立项。当项目执行者进行立项操作以后，该项目就归该执行者进行执行了。执行者在进行立项的时候，如果遇到相关信息不完整，也要提供”驳回“的选项，同时提供修改意见。业务员收到驳回意见后，完善相关信息后可以选择重新确认，也可以将用户的申请驳回，并附加修改意见。
+2.4.4	项目执行者完成任务
+根据用户的需求进行项目的执行开发。
+2.4.5	提交项目到保护中心
 项目执行者完成文件编辑以后，将文件上传版权保护中心。
-2.4.5	自动更新流水号
+2.4.6	自动更新流水号
 上传保护中心，在版权保护中心的项目提交页面上有相关项目的流水号，可以将流水号自动更新到公司的项目目录中。
-2.4.6	上传证书
+2.4.7	上传证书
 版权证书下发以后，将证书上传到公司网站上，同时修改项目状态为“证书完成”。
-2.4.7	项目结清
-当用户将钱款结清以后，更改项目的相关字段。
-2.4.8	项目归档
+2.4.8	项目结清
+当用户将钱款结清以后，更改项目的相关字段。该流程节点可以与'待确认', '已确认', '已立项', '执行中', '已完成','已上传', '已获取流水号', '证书完成'共存。
+2.4.9	项目归档
 当所有的项目状态，如“证书完成”、“项目结清”均完成以后，项目自动归档。同时相关的文件夹也剪切到归档文件夹中。
 2.5	面相项目执行者提供的服务
 1.	目的：向项目执行者提供便捷的软件著作权登记材料编辑环境。
@@ -96,11 +100,28 @@ MySQL
 位置在服务器，字段内容包括：ID（自动生成）、姓名、性别、身份证号、出生日期、邮箱、电话、注册时间、备注。
 2.7.3	权限列表
 位置在服务器，字段内容包括：ID（自动生成）、职务、执行任务权限、更新流水号权限。
-2.7.4	公司项目表
+2.7.4	论文相关项目表
+位置在服务器，字段包括：ID（自动生成）、项目名称、项目类型（project_type,enum：'论文指导', '论文发表', '学术咨询'）、服务等级（service_level,enum：‘基础服务’、‘标准服务’、‘高级服务’）、申请人类型（application，enum：‘个人学者’、‘医疗机构’、‘企业研发’、‘联合申请’）、文章类型、研究领域、目标期刊、论文状态（enum：‘初稿’、‘修改中’、‘已投稿’、‘审稿中’、‘已录用’、‘已发表’、‘被拒稿’）、申请时间、确认时间、开始时间、提交时间、接收时间、出版时间、价格、折扣、状态（status，enum：‘待确认’、‘已确认’、‘进行中’、‘已投稿’、‘审稿中’、‘已录用’、‘已发表’、‘已完成’、‘已归档’）、是否归档（type:bool）、申请者ID、确认者ID、执行者ID、备注、是否结算（type：bool）、结算时间。
+2.7.5	专利相关项目表
+位置在服务器，字段包括：ID（自动生成）、项目名称、项目类型（project_type,ENUM：'发明专利申请', '实用新型申请', '外观设计申请', '国际申请', '专利保护', '专利管理'）、申请人类型（application_type，enum：‘个人学者’、‘医疗机构’、‘企业研发’、‘联合申请’）、应用领域（application_field,enum:'医疗设备', '生物医药', '数字医疗', '其他领域'）、发明名称、技术领域、申请号、公开号、专利号、专利状态（patent_status，enum：'申请中', '公开', '实审', '授权', '维持', '终止', '无效'）、申请时间、确认时间、递交时间、公开时间、授权时间、价格、折扣、年费、状态（status：enum：'待确认', '已确认', '准备中', '已递交', '审查中', '已授权', '维持中', '已完成', '已归档'）、是否归档（type:bool）、申请者ID、确认者ID、执行者ID、备注、开始时间、是否结算（type:bool）、结算时间。
+
+2.7.6	软著相关的公司项目表
 位置在服务器，字段内容包括：ID（自动生成）、项目名称、项目类型、申请人类型（个人、事业单位、事业单位联合个人、自然人联合）、著作权人（文本类型）、软著申请人名称（可以是申请者本人也可以是其他）、项目流水号（文本类型）、项目优先项（普通、加急、快速）、项目申请时间、项目确认时间、项目执行时间、项目完成时间、项目结清时间、项目上网提交时间、项目证书完成时间、项目价目、优惠折扣、是否归档、申请者ID、确认者ID、执行者ID、项目备注。
 	注：所有的时间类型字段可以为空。
-2.7.5	本地项目表
-位置在服务器，仅包含公司项目表中已经确认过的项目，字段包括：ID、项目名称、项目类型、申请人类型（个人、事业单位、事业单位联合个人、自然人联合）、著作权人（文本类型）、软著申请人名称（可以是申请者本人也可以是其他）、项目流水号、项目优先项（普通、加急、快速）、申请人类型、项目进度（已确认、已立项、已完成、已上传、已获取流水号、已完成）、执行者ID、项目备注。
+2.7.7	项目流程表
+用来记录项目流程的详细信息。
+2.7.8	软著相关归档项目表
+位置在服务器，字段内容包括：ID、项目名称、项目类型、申请人类型（个人、事业单位、事业单位联合个人、自然人联合）、著作权人（文本类型）、软著申请人名称（可以是申请者本人也可以是其他）、项目流水号（文本类型）、项目优先项（普通、加急、快速）、项目申请时间、项目确认时间、项目执行时间、项目完成时间、项目结清时间、项目上网提交时间、项目证书完成时间、项目价目、优惠折扣、是否归档、归档日期、申请者ID、确认者ID、执行者ID、项目备注。
+	注：所有的时间类型字段可以为空。
+当项目归档时，记录从软著相关的公司项目表中移动到该项目表中。
+2.7.9	论文相关归档项目表
+位置在服务器，字段包括：ID（自动生成）、项目名称、项目类型（project_type,enum：'论文指导', '论文发表', '学术咨询'）、服务等级（service_level,enum：‘基础服务’、‘标准服务’、‘高级服务’）、申请人类型（application，enum：‘个人学者’、‘医疗机构’、‘企业研发’、‘联合申请’）、文章类型、研究领域、目标期刊、论文状态（enum：‘初稿’、‘修改中’、‘已投稿’、‘审稿中’、‘已录用’、‘已发表’、‘被拒稿’）、申请时间、确认时间、开始时间、提交时间、接收时间、出版时间、价格、折扣、状态（status，enum：‘待确认’、‘已确认’、‘进行中’、‘已投稿’、‘审稿中’、‘已录用’、‘已发表’、‘已完成’、‘已归档’）、是否归档（type:bool）、申请者ID、确认者ID、执行者ID、备注、是否结算（type：bool）、结算时间。
+	注：所有的时间类型字段可以为空。
+当项目归档时，记录从论文相关的公司项目表中移动到该项目表中。
+2.7.10	专利相关归档项目表
+位置在服务器，字段包括：ID（自动生成）、项目名称、项目类型（project_type,ENUM：'发明专利申请', '实用新型申请', '外观设计申请', '国际申请', '专利保护', '专利管理'）、申请人类型（application_type，enum：‘个人学者’、‘医疗机构’、‘企业研发’、‘联合申请’）、应用领域（application_field,enum:'医疗设备', '生物医药', '数字医疗', '其他领域'）、发明名称、技术领域、申请号、公开号、专利号、专利状态（patent_status，enum：'申请中', '公开', '实审', '授权', '维持', '终止', '无效'）、申请时间、确认时间、递交时间、公开时间、授权时间、价格、折扣、年费、状态（status：enum：'待确认', '已确认', '准备中', '已递交', '审查中', '已授权', '维持中', '已完成', '已归档'）、是否归档（type:bool）、申请者ID、确认者ID、执行者ID、备注、开始时间、是否结算（type:bool）、结算时间。
+	注：所有的时间类型字段可以为空。
+当项目归档时，记录从专利相关的公司项目表中移动到该项目表中。
 2.8	应用相关本地文件夹
 应用相关的本地文件夹默认位置在：D:// SoftwareCopyrightMS。软件运行时要先检测是否存在该文件夹。不存在的话自动新建文件夹。以下是文件目录：
 1.	根目录：SoftwareCopyrightMS
@@ -110,7 +131,7 @@ MySQL
 5.	模板文件库：SoftwareCopyrightMS/model
 6.	模板文件库中合同模板：SoftwareCopyrightMS/model/contract
 7.	模板文件库中应用材料模板：SoftwareCopyrightMS/model/material
-8.	归档材料：SoftwareCopyrightMS/ProjectFile
+8.	归档项目材料：SoftwareCopyrightMS/ProjectFile
 2.8.1	相关文件命名规范
 1.	事业单位统一社会信用代码证书PDF：事业单位名称+社会统一信用代码。
 2.	身份证复印件PDF：姓名+身份证号。
@@ -131,36 +152,165 @@ MySQL
 2.9.5	项目管理
 提供项目的新建、归档。
 
-
-
 3	系统的整体框架
 3.1	技术要求
 1.	使用Python开发，服务器的应用采用B/S服务架构，个人计算机的应用采用C/S服务架构。
 2.	服务器数据库采用MySQL，个人计算机的数据库采用SQLite。使用orm框架构架构建数据库。
 3.	可以采用request插件等，应用界面可以使用TKinter库构建。
+3.2	桌面应用设计
+3.2.1	应用功能概述
+桌面应用主要用来协助执行者进行项目的软件著作权登记文档的编辑与开发。应用提供便捷的文件管理功能、模板管理功能、网站访问链接。应用采用MCV架构实现前后端分离。
+3.2.2	网络连接方式
+可以直接连接MySQL服务器。可以通过自带的配置表config\config.py进行数据库的配置。
+3.2.3	登录界面
+登录界面提供根据邮箱账号和密码进行登录。登录成功后进入主界面。
+3.2.4	登录逻辑
+登录时需要从MySQL服务器 只有执行者及系统管理员才有登录权限。
+3.2.5	主界面设计
+界面采用TKinter架构布局，使用Notebook进行子页面的创建。主界面的子页面包括“Task_view”(任务视图)、“models_manage”(模板管理)、“material_manage”（材料管理）、“System_setting”（系统设置）。
+3.2.6	任务视图
+3.2.6.1	功能定位
+主要用于项目文件创建、流水号获取、项目管理。其中的项目信息，包括“已立项”、“执行中”、“已完成”的数据来自服务器上的MySQL数据库。从数据库的Project表中获取，根据表中的status字段获取记录是否“已立项”、“执行中”、“已完成”。
+3.2.6.2	界面设置
+整体设置采用左侧列表、右侧项目详情。采用grid方式布局，使用Frame加载控件。左侧Frame.width（left_frame）=*，右侧Frame.width(right_frame)=5*。
+1.	Left_frame控件中包含一个Tab控件，该控件有3个页，分别加载1个Treeview控件，分别显示 “已立项”项目、“执行中”项目、“已完成”项目。Treeview显示数据方式为列表格式。
+2.	Right_frame控件包含3个垂直排列的Frame，分别为Controls_frame(height=25)、detail_frame(height=*)、handle_frame(height=25)。
+3.	Controls_frame用来显示控制按钮，主要实现以下功能：
+a)	1.创建项目文件夹：通过调用“模板选择Dialog”窗体向用户提供模板选择功能，进而实现对已立项项目相关文档的创建。创建以后该项目自动进入“执行中”队列中；如果该项目已经存在相对应的项目文件夹，则提示用户项目文件夹已存在；如果该项目的status（数据库中的字段）已经为“执行中”，则仅仅创建该项目的项目文件夹。
+b)	标记为已完成：如果项目已经完成，提供按钮实现将项目的status标记为“已完成”。
+c)	标记为已结算：选中项目以后，通过点击该按钮实现修改该项目在服务器中的“is_settled”字段为true。同时将当前时间记录在settle_time字段中。
+d)	项目归档：通过点击该按钮实现项目的归档任务。具体包括：先检验该项目是否已经结算（即项目记录中的is_settle字段的值为true），然后再将该项目的
+e)	提供调取用户身份证复印件列表的按钮，单击该按钮后弹出新的Dialog窗体，该窗体显示目前身份证复印件文件夹中的文件列表，同时提供10条最新近添加的身份证复印件信息记录。提供调取事业单位统一社会信用代码证书文件夹中的文件列表的按钮，单击该按钮后弹出新的Dialog窗体，该窗体显示目前事业单位统一社会信用代码证书的文件夹中的文件列表，同时提供10条最新近添加的身份证复印件信息记录。该Dialog窗体在后文详细介绍。提供调取合同文件夹中文件列表的按钮，单击该按钮后弹出新的Dialog窗体，该窗体显示目前合同文件夹中的文件列表。上述的Dialog窗体在后文详细介绍。
+4.	Detail_frame提供对项目详情的展示。主要分为左右2列——detail_left_frame和detail_right_frame。
+5.	detail_left_frame用来显示选中的项目所拥有的文件列表。同时提供右键菜单，可以打开文件或者打开文件所在文件夹。
+6.	detail_right_frame用来显示选中项目的详细信息，主要通过标签和文本框进行显示。注意在第一行显示姓名、流水号、著作权人，通过提供这些字段的项目的检索功能，检索到相关项目后，在Left_frame中可以迅速跳转到相关的Treeview控件中，同时选中该项目的记录。
+7.	handle_frame：提供按钮实现对国家版权保护中心的便捷访问。用户通过该按钮可以打开国家版权保护中心的网站，当用户登录账号进入“用户中心”后，可以通过点击另外一个按钮——“获取项目流水号”，通过获取网页上面的相关信息，根据项目名称、项目申请人信息与页面上的软著名称、软著申请人进行匹配，执行流水号的自动化获取。获取成功后，将流水号信息自动添加到detail_right_frame中相关的信息中，同时更新数据库中相关的信息。提供按钮实现对公司网站的便捷访问。
+3.2.7	模板管理
+3.2.7.1	功能定位
+提供对软著申请文档的模板的管理功能。该模块功能包括模板的新建和文件的信息CRUD（create、Retrieve、update、delete，下同）。
+注：每一个模板都是包含若干文件的文件夹。
+3.2.7.2	界面设计
+整体界面分为左右两个Frame，即left_frame和right_frame。Left_frame.width=300，right_frame.width=*。
+1.	Left_frame控件添加文件列表功能。显示相对应的文件夹中的子文件夹信息。
+2.	Right_frame用来显示left_frame控件中相关记录的详细信息。分为上下2个frame——top_frame和bottom_frame。Top_frame.height=*，bottom_frame.height=40。Top_frame中提供对模板文件夹详细信息的呈现功能，包括模板的名称、编程语言、编程IDE、数据库类型、应用类型、备注。bottom_frame提供数据的CRUD功能。其中的create功能，可以通过调用文件夹选择窗体选择相应的文件夹，复制到目前Left_frame中激活的文件夹中，成为新的模板文件夹。同时要给该模板文件夹更改新的文件名。
+3.2.7.1	功能说明
+该模块设计的信息存储在本地的SQLite数据库中，其中的文件名采用“ID”+.+“模板名称”的命名方式。
+3.2.8	材料管理
+3.2.8.1	功能定位
+提供对软著申请材料的管理功能。包括文件的信息CRUD。
+3.2.8.2	界面设计
+整体界面分为左右两个Frame，即left_frame和right_frame。Left_frame.width=300，right_frame.width=*。
+3.	Left_frame分为上下两个Frame——top_frame和bottom_frame。
+4.	Top_frame.height=25，用来显示一个标签“材料类型”，一个combobox控件，该控件包含预设内容——身份证复印件、统一社会信用代码证书、合同模板。
+5.	Bottom_frame控件添加文件列表功能。显示相对应的文件夹中的文件信息。
+6.	Right_frame用来显示bottom_frame控件中相关记录的详细信息。分为上下2个frame——top_frame和bottom_frame。Top_frame.height=*，bottom_frame.height=40。当combobox中的项目更改时，top_frame中的控件组也进行相对应的更新。比如combobox中选择“身份证复印件”，top_frame中显示的内容包括“姓名”、“性别”、“籍贯”、“身份证号”、“备注”。当combobox中选择“统一社会信用代码证书”，top_frame中显示的内容包括“事业单位名称”、“证件有效期”、“法人代表”、“备注”。当combobox中选择“合同”，top_frame中显示的内容包括“合同名称”、“合同参与人类型”、“备注”。bottom_frame提供数据的CRUD功能。其中的create功能，可以通过调用文件选择窗体选择相应的文件，复制到目前combobox中激活的文件夹中。
+3.2.8.1	功能说明
+该模块的信息均存储在本地的SQLite数据库中。其中的文件名的命名采用“ID”+.+“模板名称”的命名方式。
+3.2.9	系统设置
+功能说明：该模块提供对“项目模板”文件夹路径、“身份证复印件”文件夹路径、“统一社会信用代码证书”文件夹路径、“合同”文件夹路径的设置，提供对服务器数据库配置url和port的设置。
+3.2.10	模板选择Dialog
+3.2.10.1	功能设计
+该窗体是通过任务视图的“创建项目文件夹”按钮被打开的，作为Dialog窗体方式向用户提供模板选择服务。通过Treeview控件显示分层数据，第一层显示最近复制过或者使用过的10条模板记录，以字段“recurrent_copy_time”的时间内容作为判定依据；第二层显示所有的模板记录。单击模板记录后，右侧frame显示模板记录的详细信息。其中模板文件
+提供用户检索功能，可以根据模板的名称进行记录的检索，检索到记录后，该记录被选中，右侧frame显示该记录的详细信息；如果该被选中的记录不在当前的界面中，系统自动调整Treeview的滚动轴，使该记录可以在Treeview控件中直接看到。
+当双击Treeview中的模板记录时，系统将完成以下3个任务：1.该条模板记录对应的模板文件夹就会作为模板文件夹复制到相应的文件夹中；2.同时将复制到相应的文件夹中的模板文件夹以任务视图中选中的项目记录的项目编号（ID）+项目名称进行文件夹命名；3.更新该条模板记录中的recurrent_copy_time字段的内容为当前的时间。
+3.2.10.2	界面设计
+整体界面分为左右两栏——left_frame和right_frame。Left_frame加载一个Treeview控件和一个bottom_frame。其中bottom_frame在Treeview控件下方，包含一个标签、一个文本框和一个检索按钮。Right_frame加载Treeview选中节点的记录详情，提供对模板文件夹详细信息的呈现功能，包括模板的名称、编程语言、编程IDE、数据库类型、应用类型、备注。
 
- 论文编辑员
-邮箱：paper_editor@yiqichuang.com
-密码：paper123
-专利编辑员
-邮箱：patent_editor@yiqichuang.com
-密码：patent123
-专家用户
-邮箱：expert@yiqichuang.com
-密码：expert123
-业务经理
-邮箱：manager@yiqichuang.com
-密码：manager123
-项目执行者
-邮箱：executor@yiqichuang.com
-密码：executor123
-普通用户账号（选择"普通用户"登录模式）
-测试用户1
-邮箱：user1@example.com
-密码：user123
-测试用户2
-邮箱：user2@example.com
-密码：user123
-测试用户3
-邮箱：user3@example.com
-密码：user123
+3.2.11	身份证复印件Dialog
+该窗体是通过任务视图中的相关按钮调取的，是Dialog类型的窗体。整体界面分为左右两个Frame，即left_frame、和right_frame。Left_frame.width=300， right_frame.width=*。
+该窗体的界面设计如下：
+1.	Left_frame加载一个Treeview控件和一个bottom_frame。Treeview用来显示所有的身份证复印件列表。Bottom_frame在Treeview控件下方，包含一个标签、一个文本框和一个检索按钮。
+2.	Right_frame用来显示身份证复印件信息的详情，具体可以参考材料管理中的相关信息。
+功能描述：left_frame中的Treeview控件显示分层数据。第一层为最近使用过或者复制过的10条身份证复印件记录，以字段“recurrent_copy_time”的时间内容作为判定依据；第二层显示全部的身份证复印件记录。
+当选中Treeview中的身份证复印件记录信息后，在right_frame中即可显示选中项目的详细信息。
+bottom_frame提供给用户输入文件名，进行模糊查询记录的功能。检索到相关记录后，Treeview中的相关记录呈选中状态，同时right_frame中显示该记录的详细信息。如果该被选中的记录不在当前的界面中，系统自动调整Treeview的滚动轴，使该记录可以在Treeview控件中直接看到。
+双击Treeview中的相关信息后，系统将完成以下3个任务：1.该条身份证复印件记录对应的身份证复印件就会被复制到相应的文件夹中；2.如果相应的文件夹中有同名文件就在该身份证复印件的名称后添加以“_1”；3.更新该条身份证复印件记录中的recurrent_copy_time字段的内容为当前的时间。
+
+3.2.12	统一社会信用代码证书Dialog
+该窗体是通过任务视图中的相关按钮调取的，是Dialog类型的窗体。整体界面分为左右两个Frame，即left_frame、和right_frame。Left_frame.width=300， right_frame.width=*。
+该窗体的界面设计如下：
+1.	Left_frame加载一个Treeview控件和一个bottom_frame。Treeview用来显示所有的统一社会信用代码证书列表。Bottom_frame在Treeview控件下方，包含一个标签、一个文本框和一个检索按钮。
+2.	Right_frame用来显示统一社会信用代码证书记录信息的详情，具体可以参考材料管理中的相关信息。
+功能描述：left_frame中的Treeview控件显示分层数据。第一层为最近使用过的10条统一社会信用代码证书记录，以字段“recurrent_copy_time”的时间内容作为判定依据；第二层显示全部的统一社会信用代码证书记录。
+当选中Treeview中的统一社会信用代码证书信息后，在right_frame中即可显示选中项目的详细信息。
+bottom_frame提供给用户输入文件名，进行模糊查询记录的功能。检索到相关记录后，Treeview中的相关记录呈选中状态，同时right_frame中显示该记录的详细信息。如果该被选中的记录不在当前的界面中，系统自动调整Treeview的滚动轴，使该记录可以在Treeview控件中直接看到。
+双击Treeview中的相关信息后，系统将完成以下3个任务：1.该条统一社会信用代码证书复印件记录对应的统一社会信用代码证书复印件就会被复制到相应的文件夹中；2.如果相应的文件夹中有同名文件就在该统一社会信用代码证书复印件的名称后添加以“_1”；3.更新该条统一社会信用代码证书复印件记录中的recurrent_copy_time字段的内容为当前的时间。
+3.2.13	合同文件Dialog
+该窗体是通过任务视图中的相关按钮调取的，是Dialog类型的窗体。整体界面分为左右两个Frame，即left_frame、和right_frame。Left_frame.width=300， right_frame.width=*。
+该窗体的界面设计如下：
+1.	Left_frame加载一个Treeview控件和一个bottom_frame。Treeview用来显示所有的合同文件列表。Bottom_frame在Treeview控件下方，包含一个标签、一个文本框和一个检索按钮。
+2.	Right_frame用来显示合同文件记录信息的详情，具体可以参考材料管理中的相关信息。
+功能描述：left_frame中的Treeview控件显示分层数据。第一层为最近使用过的10条合同文件记录，以字段“recurrent_copy_time”的时间内容作为判定依据；第二层显示全部的合同文件记录。
+当选中Treeview中的合同文件记录信息后，在right_frame中即可显示选中项目的详细信息。
+bottom_frame提供给用户输入文件名，进行模糊查询记录的功能。检索到相关记录后，Treeview中的相关记录呈选中状态，同时right_frame中显示该记录的详细信息。如果该被选中的记录不在当前的界面中，系统自动调整Treeview的滚动轴，使该记录可以在Treeview控件中直接看到。
+双击Treeview中的相关信息后，系统将完成以下3个任务：1.该条合同文件记录对应的合同文件就会被复制到相应的文件夹中；2.如果相应的文件夹中有同名文件就在该合同文件的名称后添加以“_1”；3.更新该条合同文件记录中的recurrent_copy_time字段的内容为当前的时间。
+3.2.14	数据库设计
+本地的SQLite数据设计，主要包含faultPath（默认路径表）、IDCardFile（身份证复印件表）、UnifiedSocialCreditCodeCertificateFile(统一社会信用代码证书文件表)、ContractFile(合同列表)、modelsFile（项目模板表）。
+3.2.14.1	默认路径表
+CREATE TABLE "default_paths" (
+	"id"	INTEGER,
+	"path_type"	TEXT NOT NULL UNIQUE,
+	"path_value"	TEXT NOT NULL,
+	"created_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"updated_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"recurrent_copy_time"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+3.2.14.2	身份证复印件表
+CREATE TABLE "id_card_files" (
+	"id"	INTEGER,
+	"file_name"	TEXT NOT NULL,
+	"file_path"	TEXT NOT NULL,
+	"person_name"	TEXT,
+	"gender"	TEXT,
+	"birthplace"	TEXT,
+	"id_number"	TEXT,
+	"remarks"	TEXT,
+	"created_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"updated_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"recurrent_copy_time"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+3.2.14.3	统一社会信用代码证书文件表
+CREATE TABLE "usccc_files" (
+	"id"	INTEGER,
+	"file_name"	TEXT NOT NULL,
+	"file_path"	TEXT NOT NULL,
+	"organization_name"	TEXT,
+	"validity_period"	TEXT,
+	"legal_representative"	TEXT,
+	"remarks"	TEXT,
+	"created_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"updated_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"recurrent_copy_time"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+3.2.14.4	合同列表
+CREATE TABLE "contract_files" (
+	"id"	INTEGER,
+	"file_name"	TEXT NOT NULL,
+	"file_path"	TEXT NOT NULL,
+	"contract_name"	TEXT,
+	"participant_type"	TEXT,
+	"remarks"	TEXT,
+	"created_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"updated_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"recurrent_copy_time"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+3.2.14.5	项目模板表
+CREATE TABLE "template_folders" (
+	"id"	INTEGER,
+	"folder_name"	TEXT NOT NULL,
+	"folder_path"	TEXT NOT NULL,
+	"programming_language"	TEXT,
+	"ide_type"	TEXT,
+	"database_type"	TEXT,
+	"programming_type"	TEXT,
+	"remarks"	TEXT,
+	"created_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"updated_time"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"recurrent_copy_time"	TEXT,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
+

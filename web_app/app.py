@@ -77,6 +77,7 @@ def create_app(config_name=None):
     from web_app.views.reports import reports_bp
     from web_app.views.api_auth import api_auth_bp
     from web_app.views.api_desktop import api_desktop_bp
+    from web_app.views.api_query import api_query_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(main_bp)
@@ -85,6 +86,7 @@ def create_app(config_name=None):
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(api_auth_bp, url_prefix='/api/auth')
     app.register_blueprint(api_desktop_bp, url_prefix='/api/desktop')
+    app.register_blueprint(api_query_bp)
     app.register_blueprint(paper_bp)
     app.register_blueprint(patent_bp)
     app.register_blueprint(api_paper_bp, url_prefix='/api')

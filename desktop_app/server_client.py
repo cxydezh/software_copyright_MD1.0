@@ -247,6 +247,53 @@ class ServerClient:
             self.logger.exception("Health check failed: %s", e)
             return False, f"连接测试失败: {str(e)}"
     
+    def update_project_fields(self, project_id: int, fields: Dict) -> Tuple[bool, str]:
+        """
+        更新项目字段
+        
+        Args:
+            project_id: 项目ID
+            fields: 要更新的字段字典
+            
+        Returns:
+            (success, message)
+        """
+        # 检查是否已登录
+        if not self.current_user:
+            return False, '请先登录'
+        
+        # 准备请求数据
+        data = {
+            'email': self.current_user.get('email'),
+            'password': self.user_password,
+            'user_type': self.current_user.get('user_type'),
+            'project_id': project_id,
+            'fields': fields
+        }
+        
+        success, response = self._make_request('POST', '/desktop/update_project', data)
+        
+        if success and response.get('success'):
+            self.logger.info("Update project %d fields success", project_id)
+            return True, response.get('message', '更新成功')
+        else:
+            msg = response.get('message', '更新项目失败') if isinstance(response, dict) else '更新项目失败'
+            self.logger.warning("Update project fields failed: %s", msg)
+            return False, msg
+    
+    def update_project_serial(self, project_id: int, serial_number: str) -> Tuple[bool, str]:
+        """
+        更新项目流水号
+        
+        Args:
+            project_id: 项目ID
+            serial_number: 流水号
+            
+        Returns:
+            (success, message)
+        """
+        return self.update_project_fields(project_id, {'serial_number': serial_number})
+    
     def get_server_info(self) -> Dict:
         """
         获取服务器信息

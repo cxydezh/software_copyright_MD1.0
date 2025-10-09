@@ -203,3 +203,74 @@ def desktop_sync_projects():
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'同步项目失败: {str(e)}'})
+
+@api_desktop_bp.route('/update_project', methods=['POST'])
+def desktop_update_project():
+    """桌面客户端更新项目字段API"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': '请求数据格式错误'})
+        
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        user_type = data.get('user_type', 'staff').strip()
+        project_id = data.get('project_id')
+        fields = data.get('fields', {})
+        
+        if not project_id:
+            return jsonify({'success': False, 'message': '项目ID不能为空'})
+        
+        if not fields:
+            return jsonify({'success': False, 'message': '更新字段不能为空'})
+        
+        # 验证用户身份
+        user = None
+        if user_type == 'staff':
+            user = Staff.query.filter_by(email=email).first()
+        else:
+            user = User.query.filter_by(email=email).first()
+        
+        if not user or not user.check_password(password):
+            return jsonify({'success': False, 'message': '身份验证失败'})
+        
+        # 检查权限（只有员工可以更新项目）
+        if user_type != 'staff':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 查找项目
+        project = Project.query.get(project_id)
+        if not project:
+            return jsonify({'success': False, 'message': '项目不存在'})
+        
+        # 定义允许更新的字段
+        allowed_fields = {
+            'project_name', 'project_type', 'applicant_type', 'copyright_owner',
+            'software_applicant_name', 'serial_number', 'priority', 'status',
+            'executor_id', 'remarks'
+        }
+        
+        # 过滤允许更新的字段
+        update_fields = {k: v for k, v in fields.items() if k in allowed_fields}
+        
+        if not update_fields:
+            return jsonify({'success': False, 'message': '没有有效的更新字段'})
+        
+        # 更新项目字段
+        for field, value in update_fields.items():
+            if hasattr(project, field):
+                setattr(project, field, value)
+        
+        # 保存到数据库
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'项目更新成功，共更新 {len(update_fields)} 个字段',
+            'updated_fields': list(update_fields.keys())
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'更新项目失败: {str(e)}'})
+
