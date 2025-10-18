@@ -46,18 +46,27 @@ from desktop_app.system_setting import SystemSettingModule
 from desktop_app.dialogs import IDCardDialog, USCCCDialog, ContractDialog
 from desktop_app.server_client import ServerClient
 from desktop_app.logger import get_logger
+from desktop_app.safe_tkinter_app import SafeTkinterApp
+from desktop_app.tkinter_event_manager import install_tkinter_event_handler
 
 
-class SoftwareCopyrightMS:
+class SoftwareCopyrightMS(SafeTkinterApp):
     """软著管理系统桌面应用主类"""
     
     def __init__(self):
-        self.root = tk.Tk()
+        super().__init__()
+        
+        # 创建根窗口
+        self.root = self.create_root()
         self.root.title("软著管理系统 - 项目执行者工具")
         self.root.geometry("1400x900")
         self.root.configure(bg='#f0f0f0')
+        
         # 安装全局异常捕获，终端可见
         self._install_exception_hooks()
+        
+        # 安装Tkinter事件处理器
+        install_tkinter_event_handler()
         
         # 设置窗口图标
         try:
@@ -78,6 +87,9 @@ class SoftwareCopyrightMS:
         
         # 初始化服务器客户端
         self.init_server_client()
+        
+        # 注册清理函数
+        self.add_cleanup_function(self._cleanup_on_exit)
         
         # 创建登录界面
         self.create_login_interface()
@@ -494,7 +506,38 @@ class SoftwareCopyrightMS:
     
     def run(self):
         """运行应用程序"""
-        self.root.mainloop()
+        try:
+            # 启动主循环
+            super().run()
+        except Exception as e:
+            print(f"[DEBUG] 应用运行异常: {e}")
+            self._cleanup_on_exit()
+    
+    def _cleanup_on_exit(self):
+        """程序退出时的清理"""
+        try:
+            print("[DEBUG] 开始清理资源...")
+            
+            # 清理Playwright浏览器实例
+            try:
+                from desktop_app.serial_fetcher_simple import clear_global_browser
+                clear_global_browser()
+                print("[DEBUG] Playwright浏览器实例已清理")
+            except Exception as e:
+                print(f"[DEBUG] 清理Playwright实例失败: {e}")
+            
+            # 清理其他资源
+            try:
+                if hasattr(self, 'server_client') and self.server_client:
+                    # 如果有服务器客户端，可以在这里清理
+                    pass
+                print("[DEBUG] 其他资源已清理")
+            except Exception as e:
+                print(f"[DEBUG] 清理其他资源失败: {e}")
+            
+            print("[DEBUG] 资源清理完成")
+        except Exception as e:
+            print(f"[DEBUG] 清理过程中出错: {e}")
 
     # -------- 通用小工具 --------
     def _set_status(self, text: str):

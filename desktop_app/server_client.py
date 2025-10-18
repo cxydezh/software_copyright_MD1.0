@@ -281,6 +281,98 @@ class ServerClient:
             self.logger.warning("Update project fields failed: %s", msg)
             return False, msg
     
+    def update_project_status(self, project_id: int, status: str) -> Tuple[bool, str]:
+        """
+        更新项目状态
+        
+        Args:
+            project_id: 项目ID
+            status: 新状态
+            
+        Returns:
+            (success, message)
+        """
+        if not self.current_user:
+            return False, '请先登录'
+        
+        data = {
+            'email': self.current_user.get('email'),
+            'password': self.user_password,
+            'user_type': self.current_user.get('user_type'),
+            'project_id': project_id,
+            'status': status
+        }
+        
+        success, response = self._make_request('POST', '/desktop/update_project_status', data)
+        
+        if success and response.get('success'):
+            self.logger.info("Update project %d status to %s success", project_id, status)
+            return True, response.get('message', '状态更新成功')
+        else:
+            msg = response.get('message', '状态更新失败') if isinstance(response, dict) else '状态更新失败'
+            self.logger.warning("Update project status failed: %s", msg)
+            return False, msg
+    
+    def settle_project(self, project_id: int) -> Tuple[bool, str]:
+        """
+        标记项目为已收费
+        
+        Args:
+            project_id: 项目ID
+            
+        Returns:
+            (success, message)
+        """
+        if not self.current_user:
+            return False, '请先登录'
+        
+        data = {
+            'email': self.current_user.get('email'),
+            'password': self.user_password,
+            'user_type': self.current_user.get('user_type'),
+            'project_id': project_id
+        }
+        
+        success, response = self._make_request('POST', '/desktop/settle_project', data)
+        
+        if success and response.get('success'):
+            self.logger.info("Settle project %d success", project_id)
+            return True, response.get('message', '项目已标记为收费')
+        else:
+            msg = response.get('message', '收费标记失败') if isinstance(response, dict) else '收费标记失败'
+            self.logger.warning("Settle project failed: %s", msg)
+            return False, msg
+    
+    def archive_project(self, project_id: int) -> Tuple[bool, str]:
+        """
+        归档项目
+        
+        Args:
+            project_id: 项目ID
+            
+        Returns:
+            (success, message)
+        """
+        if not self.current_user:
+            return False, '请先登录'
+        
+        data = {
+            'email': self.current_user.get('email'),
+            'password': self.user_password,
+            'user_type': self.current_user.get('user_type'),
+            'project_id': project_id
+        }
+        
+        success, response = self._make_request('POST', '/desktop/archive_project', data)
+        
+        if success and response.get('success'):
+            self.logger.info("Archive project %d success", project_id)
+            return True, response.get('message', '项目已归档')
+        else:
+            msg = response.get('message', '归档失败') if isinstance(response, dict) else '归档失败'
+            self.logger.warning("Archive project failed: %s", msg)
+            return False, msg
+
     def update_project_serial(self, project_id: int, serial_number: str) -> Tuple[bool, str]:
         """
         更新项目流水号

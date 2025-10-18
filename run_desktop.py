@@ -14,6 +14,9 @@ from tkinter import messagebox
 warnings.filterwarnings("ignore", ".*iCCP.*")
 os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning'
 
+# 添加项目根目录到Python路径
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 def check_dependencies():
     """检查依赖项"""
     try:
@@ -37,6 +40,7 @@ def main():
     if not check_dependencies():
         return
     
+    app = None
     try:
         # 导入并启动应用
         from desktop_app.main_with_login import SoftwareCopyrightMS
@@ -50,10 +54,29 @@ def main():
         app.run()
         
     except ImportError as e:
-        messagebox.showerror("导入错误", f"无法导入应用模块: {e}")
+        print(f"[ERROR] 导入错误: {e}")
+        try:
+            messagebox.showerror("导入错误", f"无法导入应用模块: {e}")
+        except:
+            pass
+    except KeyboardInterrupt:
+        print("\n[DEBUG] 用户中断程序")
     except Exception as e:
-        messagebox.showerror("启动错误", f"应用启动失败: {e}")
-        print(f"错误详情: {e}")
+        print(f"[ERROR] 启动错误: {e}")
+        try:
+            messagebox.showerror("启动错误", f"应用启动失败: {e}")
+        except:
+            pass
+    finally:
+        # 确保清理资源
+        if app:
+            try:
+                print("[DEBUG] 程序退出，清理资源...")
+                app._cleanup_on_exit()
+            except Exception as e:
+                print(f"[DEBUG] 清理资源时出错: {e}")
+        
+        print("[DEBUG] 程序已退出")
 
 if __name__ == '__main__':
     main()

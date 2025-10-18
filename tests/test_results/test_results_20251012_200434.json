@@ -1,0 +1,71 @@
+{
+  "test_summary": {
+    "total_tests": 10,
+    "passed_tests": 0,
+    "failed_tests": 10,
+    "total_duration": 6.262236595153809,
+    "test_date": "2025-10-12 20:04:34"
+  },
+  "test_results": [
+    {
+      "category": "Web端认证测试",
+      "success": false,
+      "duration": 0.35042381286621094,
+      "timestamp": "2025-10-12 20:04:28"
+    },
+    {
+      "category": "软件著作权业务流程测试",
+      "success": false,
+      "duration": 0.45574235916137695,
+      "timestamp": "2025-10-12 20:04:28"
+    },
+    {
+      "category": "论文指导业务流程测试",
+      "success": false,
+      "duration": 0.4361591339111328,
+      "timestamp": "2025-10-12 20:04:29"
+    },
+    {
+      "category": "专利申请业务流程测试",
+      "success": false,
+      "duration": 0.338573694229126,
+      "timestamp": "2025-10-12 20:04:29"
+    },
+    {
+      "category": "Web API接口测试",
+      "success": false,
+      "duration": 0.7516887187957764,
+      "timestamp": "2025-10-12 20:04:30"
+    },
+    {
+      "category": "Web安全测试",
+      "success": false,
+      "duration": 1.3070788383483887,
+      "timestamp": "2025-10-12 20:04:31"
+    },
+    {
+      "category": "桌面端功能测试",
+      "success": false,
+      "duration": 0.02928018569946289,
+      "timestamp": "2025-10-12 20:04:31"
+    },
+    {
+      "category": "数据同步测试",
+      "success": false,
+      "duration": 0.3146400451660156,
+      "timestamp": "2025-10-12 20:04:31"
+    },
+    {
+      "category": "集成测试",
+      "success": false,
+      "duration": 0.4830899238586426,
+      "timestamp": "2025-10-12 20:04:32"
+    },
+    {
+      "category": "性能测试",
+      "success": false,
+      "duration": 1.792449951171875,
+      "timestamp": "2025-10-12 20:04:34"
+    }
+  ]
+}

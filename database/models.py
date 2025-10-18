@@ -22,6 +22,15 @@ class Staff(UserMixin, db.Model):
     remarks = db.Column(db.Text, comment='备注')
     password_hash = db.Column(db.String(255), nullable=False, comment='密码哈希')
     
+    # 员工账号审核相关字段
+    is_staff_account = db.Column(db.Boolean, default=False, comment='是否为员工账号')
+    approval_status = db.Column(db.Enum('pending', 'approved', 'rejected'), 
+                               default='pending', comment='审核状态')
+    approval_date = db.Column(db.DateTime, comment='审核日期')
+    approver_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='审核者ID')
+    approval_remarks = db.Column(db.Text, comment='审核备注')
+    application_reason = db.Column(db.Text, comment='申请理由')
+    
     # 邮箱验证相关字段
     email_verified = db.Column(db.Boolean, default=False, comment='邮箱是否已验证')
     email_verification_token = db.Column(db.String(100), comment='邮箱验证令牌')
@@ -44,6 +53,7 @@ class Staff(UserMixin, db.Model):
     position = db.relationship('Permission', backref='staff_members')
     confirmed_projects = db.relationship('Project', foreign_keys='Project.confirmer_id', backref='confirmer')
     executed_projects = db.relationship('Project', foreign_keys='Project.executor_id', backref='executor')
+    approver = db.relationship('Staff', remote_side=[id], backref='approved_staff')
     
     def set_password(self, password):
         """设置密码"""
@@ -603,24 +613,57 @@ def init_db(app):
         if not Permission.query.first():
             business_permission = Permission(
                 position='普通业务员',
+                can_confirm=True,
+                can_approve=False,
+                can_execute=False,
+                can_manage=False,
+                can_view_all=False,
+                can_edit_paper=True,
+                can_edit_patent=True,
+                is_expert=False,
                 execute_permission=False,
                 update_serial_permission=False
             )
             executor_permission = Permission(
                 position='项目执行者',
+                can_confirm=True,
+                can_approve=False,
+                can_execute=True,
+                can_manage=True,
+                can_view_all=True,
+                can_edit_paper=True,
+                can_edit_patent=True,
+                is_expert=True,
+                execute_permission=True,
+                update_serial_permission=True
+            )
+            admin_permission = Permission(
+                position='系统管理员',
+                can_confirm=True,
+                can_approve=True,
+                can_execute=True,
+                can_manage=True,
+                can_view_all=True,
+                can_edit_paper=True,
+                can_edit_patent=True,
+                is_expert=True,
                 execute_permission=True,
                 update_serial_permission=True
             )
             
             db.session.add(business_permission)
             db.session.add(executor_permission)
+            db.session.add(admin_permission)
             
             # 创建默认管理员账户
             admin_staff = Staff(
                 name='系统管理员',
                 email='admin@yiqichuang.com',
-                position_id=2,  # 项目执行者
-                phone='13800138000'
+                position_id=3,  # 系统管理员
+                phone='13800138000',
+                is_staff_account=True,
+                approval_status='approved',
+                approval_date=datetime.utcnow()
             )
             admin_staff.set_password('admin123')
             

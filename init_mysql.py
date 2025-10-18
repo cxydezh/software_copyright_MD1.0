@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-MySQL数据库初始化脚本
+MySQL数据库设置脚本
 """
-
 import os
 import sys
-from datetime import datetime
+import pymysql
 from sqlalchemy import create_engine, text
+from datetime import datetime
 from config.config import DevelopmentConfig
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from web_app.app import create_app
-from database.models import db, Staff, User, Project, Message, Permissions
+from database.models import db, Staff, User, Project, Message, Permission
 
 def init_mysql_database():
     """初始化MySQL数据库表结构"""
@@ -39,7 +39,7 @@ def init_mysql_database():
             inspector = db.inspect(db.engine)
             tables = inspector.get_table_names()
             
-            expected_tables = ['staff', 'user', 'project', 'message', 'permissions']
+            expected_tables = ['staff', 'users', 'projects', 'messages', 'permissions']
             for table in expected_tables:
                 if table in tables:
                     print(f"✅ 表 {table} 创建成功")
@@ -66,82 +66,72 @@ def create_sample_data():
                 print("⚠️  数据库中已有数据，跳过示例数据创建")
                 return True
             
-            # 创建管理员账户
-            admin_staff = Staff(
-                username='admin@yiqichuang.com',
-                password_hash='pbkdf2:sha256:260000$admin123$hash',  # 实际应用中应该使用hash
-                name='系统管理员',
-                email='admin@yiqichuang.com',
-                phone='188 3826 9405',
-                department='技术部',
-                position_id=1,
-                is_active=True,
-                create_time=datetime.utcnow()
-            )
-            
             # 创建权限
-            admin_permission = Permissions(
+            admin_permission = Permission(
                 position='系统管理员',
                 can_confirm=True,
+                can_approve=True,
                 can_execute=True,
                 can_manage=True,
                 can_view_all=True
             )
             
-            # 创建业务员
-            business_staff = Staff(
-                username='business@yiqichuang.com',
-                password_hash='pbkdf2:sha256:260000$business123$hash',
-                name='张业务',
-                email='business@yiqichuang.com',
-                phone='0371-12345679',
-                department='业务部',
-                position_id=2,
-                is_active=True,
-                create_time=datetime.utcnow()
-            )
-            
-            business_permission = Permissions(
-                position='业务员',
+            business_permission = Permission(
+                position='普通业务员',
                 can_confirm=True,
+                can_approve=False,
                 can_execute=False,
                 can_manage=False,
                 can_view_all=False
             )
             
-            # 创建执行者
-            executor_staff = Staff(
-                username='executor@yiqichuang.com',
-                password_hash='pbkdf2:sha256:260000$executor123$hash',
-                name='李执行',
-                email='executor@yiqichuang.com',
-                phone='0371-12345680',
-                department='执行部',
-                position_id=3,
-                is_active=True,
-                create_time=datetime.utcnow()
-            )
-            
-            executor_permission = Permissions(
+            executor_permission = Permission(
                 position='项目执行者',
                 can_confirm=False,
+                can_approve=False,
                 can_execute=True,
                 can_manage=False,
                 can_view_all=False
             )
             
+            # 创建管理员账户
+            admin_staff = Staff(
+                name='系统管理员',
+                email='admin@yiqichuang.com',
+                phone='188 3826 9405',
+                position_id=1,
+                password_hash='$pbkdf2-sha256$29000$N2YqzZ8GK3bDFu4vP3P3Og$rZ3P1N4.3T1hJ5V8x9Q2O0Y7Z6W1E4R3T2Y1U0I9O8P'  # admin123
+            )
+            admin_staff.set_password('admin123')
+            
+            # 创建业务员
+            business_staff = Staff(
+                name='张业务',
+                email='business@yiqichuang.com',
+                phone='0371-12345679',
+                position_id=2,
+                password_hash='$pbkdf2-sha256$29000$N2YqzZ8GK3bDFu4vP3P3Og$rZ3P1N4.3T1hJ5V8x9Q2O0Y7Z6W1E4R3T2Y1U0I9O8P'  # business123
+            )
+            business_staff.set_password('business123')
+            
+            # 创建执行者
+            executor_staff = Staff(
+                name='李执行',
+                email='executor@yiqichuang.com',
+                phone='0371-12345680',
+                position_id=3,
+                password_hash='$pbkdf2-sha256$29000$N2YqzZ8GK3bDFu4vP3P3Og$rZ3P1N4.3T1hJ5V8x9Q2O0Y7Z6W1E4R3T2Y1U0I9O8P'  # executor123
+            )
+            executor_staff.set_password('executor123')
+            
             # 创建测试用户
             test_user = User(
-                username='test@example.com',
-                password_hash='pbkdf2:sha256:260000$test123$hash',
                 name='测试用户',
                 email='test@example.com',
                 phone='13800138000',
-                company='测试公司',
-                address='测试地址',
-                is_active=True,
-                create_time=datetime.utcnow()
+                password_hash='$pbkdf2-sha256$29000$N2YqzZ8GK3bDFu4vP3P3Og$rZ3P1N4.3T1hJ5V8x9Q2O0Y7Z6W1E4R3T2Y1U0I9O8P'  # test123
             )
+            test_user.set_password('test123')
             
             # 保存到数据库
             db.session.add(admin_permission)

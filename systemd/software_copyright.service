@@ -1,0 +1,18 @@
+[Unit]
+Description=Software Copyright Management System
+After=network.target mysql.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/software_copyright
+Environment="PATH=/var/www/software_copyright/venv/bin"
+ExecStart=/var/www/software_copyright/venv/bin/gunicorn -c gunicorn_config.py wsgi:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

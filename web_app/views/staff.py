@@ -7,10 +7,15 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database.models import db, Project, Message, User, Staff, ProcessLog
+from database.models import db, Project, Message, User, Staff, ProcessLog, Permission
 from werkzeug.security import generate_password_hash
 
 staff_bp = Blueprint('staff', __name__)
+
+@staff_bp.route('/login')
+def staff_login():
+    """员工登录页面重定向"""
+    return redirect(url_for('auth.login'))
 
 @staff_bp.route('/business_dashboard')
 @login_required
@@ -523,7 +528,7 @@ def assigned_projects():
         return redirect(url_for('staff.business_dashboard'))
     
     # 获取分配给我的所有项目
-    assigned_projects = Project.query.filter_by(executor_id=current_user.id).filter(Project.status != '执行中').order_by(Project.execute_time.desc()).all()
+    assigned_projects = Project.query.filter_by(executor_id=current_user.id).order_by(Project.execute_time.desc()).all()
     
     return render_template('staff/assigned_projects.html', assigned_projects=assigned_projects)
 
@@ -652,3 +657,136 @@ def project_query():
         return redirect(url_for('main.index'))
     
     return render_template('staff/project_query.html')
+
+@staff_bp.route('/user_management')
+@login_required
+def user_management():
+    """系统管理员用户管理页面"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # 检查是否为系统管理员
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '系统管理员'):
+        flash('您不是系统管理员，无权访问此页面', 'danger')
+        return redirect(url_for('staff.business_dashboard'))
+    
+    # 获取待审核的员工账号
+    pending_staff = Staff.query.filter_by(is_staff_account=True, approval_status='pending').order_by(Staff.register_date.desc()).all()
+
+    # 获取所有员工账号
+    all_staff = Staff.query.filter_by(is_staff_account=True).order_by(Staff.register_date.desc()).all()
+    
+    # 获取所有普通用户
+    all_users = User.query.order_by(User.register_time.desc()).all()
+    
+    return render_template('staff/user_management.html',
+                         pending_staff=pending_staff,
+                         all_staff=all_staff,
+                         all_users=all_users)
+
+@staff_bp.route('/approve_staff/<int:staff_id>', methods=['POST'])
+@login_required
+def approve_staff(staff_id):
+    """审核通过员工账号"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    # 检查是否为系统管理员
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '系统管理员'):
+        return jsonify({'success': False, 'message': '您不是系统管理员，无权执行此操作'})
+    
+    staff = Staff.query.get_or_404(staff_id)
+    
+    if not staff.is_staff_account or staff.approval_status != 'pending':
+        return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
+    
+    try:
+        staff.approval_status = 'approved'
+        staff.approval_date = datetime.utcnow()
+        staff.approver_id = current_user.id
+        
+        # 如果没有分配权限，默认分配普通业务员权限
+        if not staff.position_id:
+            default_permission = Permission.query.filter_by(position='普通业务员').first()
+            if default_permission:
+                staff.position_id = default_permission.id
+        
+        db.session.commit()
+        
+        # TODO: 发送审核通过邮件通知
+        
+        return jsonify({'success': True, 'message': '员工账号审核通过'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
+
+@staff_bp.route('/reject_staff/<int:staff_id>', methods=['POST'])
+@login_required
+def reject_staff(staff_id):
+    """驳回员工账号"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    # 检查是否为系统管理员
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '系统管理员'):
+        return jsonify({'success': False, 'message': '您不是系统管理员，无权执行此操作'})
+    
+    staff = Staff.query.get_or_404(staff_id)
+    
+    if not staff.is_staff_account or staff.approval_status != 'pending':
+        return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
+    
+    data = request.get_json() or {}
+    rejection_reason = data.get('rejection_reason', '').strip()
+    
+    if not rejection_reason:
+        return jsonify({'success': False, 'message': '请输入驳回原因'})
+    
+    try:
+        staff.approval_status = 'rejected'
+        staff.approval_date = datetime.utcnow()
+        staff.approver_id = current_user.id
+        staff.approval_remarks = rejection_reason
+        
+        db.session.commit()
+        
+        # TODO: 发送驳回邮件通知
+        
+        return jsonify({'success': True, 'message': '员工账号已驳回'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
+
+@staff_bp.route('/assign_permission/<int:staff_id>', methods=['POST'])
+@login_required
+def assign_permission(staff_id):
+    """为员工分配权限"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    # 检查是否为系统管理员
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '系统管理员'):
+        return jsonify({'success': False, 'message': '您不是系统管理员，无权执行此操作'})
+    
+    staff = Staff.query.get_or_404(staff_id)
+    
+    if not staff.is_staff_account or staff.approval_status != 'approved':
+        return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
+    
+    data = request.get_json() or {}
+    permission_id = data.get('permission_id')
+    
+    if not permission_id:
+        return jsonify({'success': False, 'message': '请选择权限'})
+    
+    try:
+        permission = Permission.query.get_or_404(permission_id)
+        staff.position_id = permission_id
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'已分配{permission.position}权限'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})

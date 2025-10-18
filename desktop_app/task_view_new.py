@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.config import LOCAL_CONFIG
 from desktop_app.dialogs import IDCardDialog, USCCCDialog, ContractDialog
 from desktop_app.server_client import ServerClient
-from desktop_app.serial_fetcher import fetch_serial_for_project
+from desktop_app.serial_fetcher_simple import fetch_serial_for_project
 from desktop_app.selection_dialogs import (TemplateSelectionDialog, IDCardFileDialog,
                                            USCCCFileDialog, ContractFileDialog)
 
@@ -216,26 +216,37 @@ class TaskViewModule:
     
     def create_controls_frame(self):
         """创建控制按钮框架"""
+        self.use_playwright_browser = tk.BooleanVar()
         self.controls_frame = tk.Frame(self.right_frame, bg='white', height=25)
         self.controls_frame.pack(fill='x', pady=(0, 10))
         self.controls_frame.pack_propagate(False)
         
         # 按钮
-        tk.Button(self.controls_frame, text="创建项目文件夹", 
+        tk.Button(self.controls_frame, text="创建项目", 
                  font=('Microsoft YaHei', 9), bg='#38a169', fg='white',
                  command=self.create_project_folder).pack(side='left', padx=5)
         
-        tk.Button(self.controls_frame, text="标记为执行中", 
+        tk.Button(self.controls_frame, text="执行", 
                  font=('Microsoft YaHei', 9), bg='#3182ce', fg='white',
                  command=self.mark_as_executing).pack(side='left', padx=5)
         
-        tk.Button(self.controls_frame, text="标记为已完成", 
+        tk.Button(self.controls_frame, text="完成", 
                  font=('Microsoft YaHei', 9), bg='#d69e2e', fg='white',
                  command=self.mark_as_completed).pack(side='left', padx=5)
+
+        tk.Button(self.controls_frame, text="收费", 
+                 font=('Microsoft YaHei', 9), bg='#d69e2e', fg='white',
+                 command=self.mark_as_charged).pack(side='left', padx=5)
+
+        tk.Button(self.controls_frame, text="归档", 
+                 font=('Microsoft YaHei', 9), bg='#d69e2e', fg='white',
+                 command=self.mark_as_archived).pack(side='left', padx=5)
 
         tk.Button(self.controls_frame, text="获取流水号", 
                  font=('Microsoft YaHei', 9), bg='#805ad5', fg='white',
                  command=self.fetch_serial_number).pack(side='left', padx=5)
+        tk.Checkbutton(self.controls_frame,text="使用pwEXPLOER",variable=self.use_playwright_browser).pack(side='left', padx=5)
+        self.use_playwright_browser.set(True)
     
     def create_detail_frame(self):
         """创建详情框架 - 按照需求文档设计"""
@@ -291,57 +302,60 @@ class TaskViewModule:
         self.file_tree.bind('<Double-1>', self.open_file)
     
     def create_project_info(self):
-        """创建右侧项目详细信息"""
+        """创建右侧项目详细信息 - 支持动态滚动框架"""
         # 项目信息标题
         tk.Label(self.detail_right_frame, text="项目详细信息", 
                 font=('Microsoft YaHei', 10, 'bold'), bg='white').pack(anchor='w', pady=(0, 5))
         
-        # 创建滚动框架
-        info_canvas = tk.Canvas(self.detail_right_frame, bg='white')
-        info_scrollbar = ttk.Scrollbar(self.detail_right_frame, orient='vertical', 
-                                     command=info_canvas.yview)
-        self.info_scrollable_frame = tk.Frame(info_canvas, bg='white')
+        # 创建动态滚动框架容器
+        self.info_container = tk.Frame(self.detail_right_frame, bg='white')
+        self.info_container.pack(fill='both', expand=True)
         
-        info_canvas.configure(yscrollcommand=info_scrollbar.set)
-        info_canvas.pack(side='left', fill='both', expand=True)
-        info_scrollbar.pack(side='right', fill='y')
-        
-        # 在画布中创建窗口
-        info_canvas.create_window((0, 0), window=self.info_scrollable_frame, anchor='nw')
+        # 初始化滚动框架相关变量
+        self.info_canvas = None
+        self.info_scrollbar = None
+        self.info_scrollable_frame = None
+        self.scroll_frame_active = False
         
         # 项目信息字段
         self.info_labels = {}
         self.info_entries = {}
         
+        # 创建项目信息内容
+        self._create_info_content()
+        
+        # 绑定窗口大小变化事件
+        self._bind_resize_events()
+        
+        # 初始检查是否需要滚动框架
+        self._check_and_update_scroll_frame()
+    
+    def _create_info_content(self):
+        """创建项目信息内容"""
         # 第一行：姓名、流水号、著作权人（带检索功能）
-        first_row = tk.Frame(self.info_scrollable_frame, bg='white')
+        first_row = tk.Frame(self.info_scrollable_frame if self.scroll_frame_active else self.info_container, bg='white')
         first_row.pack(fill='x', pady=5)
         
-        # 姓名
-        tk.Label(first_row, text="姓名:", font=('Microsoft YaHei', 9), bg='white').grid(row=0, column=0, sticky='w', padx=(0, 5))
-        self.info_entries['applicant_name'] = tk.Entry(first_row, font=('Microsoft YaHei', 9), width=15)
-        self.info_entries['applicant_name'].grid(row=0, column=1, padx=(0, 10))
+        # 申请人
+        tk.Label(first_row, text="申请人:", font=('Microsoft YaHei', 9), bg='white').grid(row=0, column=0, sticky='w', padx=(0, 5))
+        self.info_entries['software_applicant_name'] = tk.Entry(first_row, font=('Microsoft YaHei', 9), width=15)
+        self.info_entries['software_applicant_name'].grid(row=0, column=1, padx=(0, 10))
         
         # 流水号
         tk.Label(first_row, text="流水号:", font=('Microsoft YaHei', 9), bg='white').grid(row=0, column=2, sticky='w', padx=(0, 5))
         self.info_entries['serial_number'] = tk.Entry(first_row, font=('Microsoft YaHei', 9), width=15)
         self.info_entries['serial_number'].grid(row=0, column=3, padx=(0, 10))
         
-        # 著作权人
-        tk.Label(first_row, text="著作权人:", font=('Microsoft YaHei', 9), bg='white').grid(row=0, column=4, sticky='w', padx=(0, 5))
-        self.info_entries['copyright_owner'] = tk.Entry(first_row, font=('Microsoft YaHei', 9), width=15)
-        self.info_entries['copyright_owner'].grid(row=0, column=5, padx=(0, 10))
-        
         # 检索按钮
         tk.Button(first_row, text="检索项目", font=('Microsoft YaHei', 8), 
-                 command=self.search_project).grid(row=0, column=6, padx=(5, 0))
+                 command=self.search_project).grid(row=0, column=4, padx=(5, 0))
         
         # 其他项目信息字段
         info_fields = [
             ('项目名称', 'project_name', 20),
             ('项目类型', 'project_type', 15),
             ('申请人类型', 'applicant_type', 15),
-            ('软件申请人', 'software_applicant_name', 20),
+            ('著作权人', 'copyright_owner', 20),
             ('优先级', 'priority', 10),
             ('状态', 'status', 10),
             ('执行者', 'executor_name', 15),
@@ -349,7 +363,7 @@ class TaskViewModule:
         ]
         
         for i, (label_text, field_name, width) in enumerate(info_fields):
-            row_frame = tk.Frame(self.info_scrollable_frame, bg='white')
+            row_frame = tk.Frame(self.info_scrollable_frame if self.scroll_frame_active else self.info_container, bg='white')
             row_frame.pack(fill='x', pady=2)
             
             tk.Label(row_frame, text=f"{label_text}:", font=('Microsoft YaHei', 9), 
@@ -364,13 +378,221 @@ class TaskViewModule:
                 self.info_entries[field_name] = tk.Entry(row_frame, font=('Microsoft YaHei', 9), 
                                                        width=width)
                 self.info_entries[field_name].pack(side='left', fill='x', expand=True)
+    
+    def _bind_resize_events(self):
+        """绑定窗口大小变化事件"""
+        # 绑定主窗口大小变化事件
+        self.parent.bind('<Configure>', self._on_window_resize)
+        self.detail_right_frame.bind('<Configure>', self._on_frame_resize)
         
-        # 绑定滚动事件
-        def on_mousewheel(event):
-            info_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        # 绑定主框架大小变化事件
+        self.main_frame.bind('<Configure>', self._on_main_frame_resize)
         
-        info_canvas.bind("<MouseWheel>", on_mousewheel)
-        self.info_scrollable_frame.bind("<MouseWheel>", on_mousewheel)
+        # 绑定详情框架大小变化事件
+        self.detail_frame.bind('<Configure>', self._on_detail_frame_resize)
+    
+    def _on_window_resize(self, event):
+        """窗口大小变化事件处理"""
+        # 只有当事件来源是主窗口时才处理
+        if event.widget == self.parent:
+            # 延迟检查，避免频繁更新
+            self.parent.after(100, self._check_and_update_scroll_frame)
+    
+    def _on_frame_resize(self, event):
+        """框架大小变化事件处理"""
+        # 只有当事件来源是详情右侧框架时才处理
+        if event.widget == self.detail_right_frame:
+            # 延迟检查，避免频繁更新
+            self.parent.after(100, self._check_and_update_scroll_frame)
+    
+    def _on_main_frame_resize(self, event):
+        """主框架大小变化事件处理"""
+        # 只有当事件来源是主框架时才处理
+        if event.widget == self.main_frame:
+            # 延迟检查，避免频繁更新
+            self.parent.after(150, self._check_and_update_scroll_frame)
+    
+    def _on_detail_frame_resize(self, event):
+        """详情框架大小变化事件处理"""
+        # 只有当事件来源是详情框架时才处理
+        if event.widget == self.detail_frame:
+            # 延迟检查，避免频繁更新
+            self.parent.after(120, self._check_and_update_scroll_frame)
+    
+    def _check_and_update_scroll_frame(self):
+        """检查并更新滚动框架状态"""
+        try:
+            # 获取当前框架尺寸
+            frame_width = self.detail_right_frame.winfo_width()
+            frame_height = self.detail_right_frame.winfo_height()
+            
+            # 如果框架还没有初始化，跳过
+            if frame_width <= 1 or frame_height <= 1:
+                return
+            
+            # 估算内容所需的高度
+            estimated_content_height = self._estimate_content_height()
+            
+            # 判断是否需要滚动框架
+            needs_scroll = estimated_content_height > frame_height - 50  # 预留50像素的边距
+            
+            print(f"[DEBUG] 框架尺寸: {frame_width}x{frame_height}, 估算内容高度: {estimated_content_height}, 需要滚动: {needs_scroll}")
+            
+            # 如果滚动状态需要改变
+            if needs_scroll != self.scroll_frame_active:
+                self._toggle_scroll_frame(needs_scroll)
+                
+        except Exception as e:
+            print(f"[DEBUG] 检查滚动框架状态失败: {e}")
+    
+    def _estimate_content_height(self):
+        """估算内容所需的高度"""
+        try:
+            # 基础高度：标题 + 边距
+            base_height = 35
+            
+            # 第一行高度（申请人、流水号、检索按钮）
+            first_row_height = 35
+            
+            # 其他字段高度（每个字段约35像素，包括标签和输入框）
+            field_count = 7  # 项目名称、项目类型、申请人类型、著作权人、优先级、状态、执行者
+            fields_height = field_count * 35
+            
+            # 备注字段额外高度（多行文本框，3行）
+            remarks_height = 80
+            
+            # 额外边距和间距
+            spacing_height = 20
+            
+            # 总高度
+            total_height = base_height + first_row_height + fields_height + remarks_height + spacing_height
+            
+            #print(f"[DEBUG] 内容高度估算: 基础={base_height}, 第一行={first_row_height}, 字段={fields_height}, 备注={remarks_height}, 间距={spacing_height}, 总计={total_height}")
+            
+            return total_height
+            
+        except Exception as e:
+            print(f"[DEBUG] 估算内容高度失败: {e}")
+            return 400  # 默认高度
+    
+    def _toggle_scroll_frame(self, enable_scroll):
+        """切换滚动框架状态"""
+        try:
+            print(f"[DEBUG] 切换滚动框架状态: {enable_scroll}")
+            
+            if enable_scroll and not self.scroll_frame_active:
+                # 启用滚动框架
+                self._enable_scroll_frame()
+            elif not enable_scroll and self.scroll_frame_active:
+                # 禁用滚动框架
+                self._disable_scroll_frame()
+                
+        except Exception as e:
+            print(f"[DEBUG] 切换滚动框架失败: {e}")
+    
+    def _enable_scroll_frame(self):
+        """启用滚动框架"""
+        try:
+            print("[DEBUG] 启用滚动框架")
+            
+            # 清空容器
+            for widget in self.info_container.winfo_children():
+                widget.destroy()
+            
+            # 创建滚动框架
+            self.info_canvas = tk.Canvas(self.info_container, bg='white')
+            self.info_scrollbar = ttk.Scrollbar(self.info_container, orient='vertical', 
+                                             command=self.info_canvas.yview)
+            self.info_scrollable_frame = tk.Frame(self.info_canvas, bg='white')
+            
+            self.info_canvas.configure(yscrollcommand=self.info_scrollbar.set)
+            self.info_canvas.pack(side='left', fill='both', expand=True)
+            self.info_scrollbar.pack(side='right', fill='y')
+            
+            # 在画布中创建窗口
+            self.info_canvas.create_window((0, 0), window=self.info_scrollable_frame, anchor='nw')
+            
+            # 绑定滚动事件
+            def on_mousewheel(event):
+                self.info_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            
+            self.info_canvas.bind("<MouseWheel>", on_mousewheel)
+            self.info_scrollable_frame.bind("<MouseWheel>", on_mousewheel)
+            
+            # 更新状态
+            self.scroll_frame_active = True
+            
+            # 重新创建内容
+            self._create_info_content()
+            
+            # 更新滚动区域
+            self._update_scroll_region()
+            
+            print("[DEBUG] 滚动框架已启用")
+            
+        except Exception as e:
+            print(f"[DEBUG] 启用滚动框架失败: {e}")
+    
+    def _disable_scroll_frame(self):
+        """禁用滚动框架"""
+        try:
+            print("[DEBUG] 禁用滚动框架")
+            
+            # 清空容器
+            for widget in self.info_container.winfo_children():
+                widget.destroy()
+            
+            # 销毁滚动框架组件
+            if self.info_canvas:
+                self.info_canvas.destroy()
+                self.info_canvas = None
+            if self.info_scrollbar:
+                self.info_scrollbar.destroy()
+                self.info_scrollbar = None
+            if self.info_scrollable_frame:
+                self.info_scrollable_frame.destroy()
+                self.info_scrollable_frame = None
+            
+            # 更新状态
+            self.scroll_frame_active = False
+            
+            # 重新创建内容（直接放在容器中）
+            self._create_info_content()
+            
+            print("[DEBUG] 滚动框架已禁用")
+            
+        except Exception as e:
+            print(f"[DEBUG] 禁用滚动框架失败: {e}")
+    
+    def _update_scroll_region(self):
+        """更新滚动区域"""
+        try:
+            if self.info_canvas and self.info_scrollable_frame:
+                # 等待框架更新
+                self.info_container.update_idletasks()
+                
+                # 更新滚动区域
+                self.info_canvas.configure(scrollregion=self.info_canvas.bbox("all"))
+                
+        except Exception as e:
+            print(f"[DEBUG] 更新滚动区域失败: {e}")
+    
+    def refresh_scroll_frame(self):
+        """手动刷新滚动框架状态（供外部调用）"""
+        try:
+            print("[DEBUG] 手动刷新滚动框架状态")
+            self._check_and_update_scroll_frame()
+        except Exception as e:
+            print(f"[DEBUG] 手动刷新滚动框架失败: {e}")
+    
+    def get_scroll_frame_status(self):
+        """获取当前滚动框架状态"""
+        return {
+            'active': self.scroll_frame_active,
+            'has_canvas': self.info_canvas is not None,
+            'has_scrollbar': self.info_scrollbar is not None,
+            'has_scrollable_frame': self.info_scrollable_frame is not None
+        }
     
     def create_handle_frame(self):
         """创建操作按钮框架 - 按照需求文档设计"""
@@ -491,13 +713,12 @@ class TaskViewModule:
             
             # 填充项目信息到右侧详情区域
             project_data = {
-                'applicant_name': project.get('software_applicant_name', ''),
+                'software_applicant_name': project.get('software_applicant_name', ''),
                 'serial_number': project.get('serial_number', ''),
                 'copyright_owner': project.get('copyright_owner', ''),
                 'project_name': project.get('project_name', ''),
                 'project_type': project.get('project_type', ''),
                 'applicant_type': project.get('applicant_type', ''),
-                'software_applicant_name': project.get('software_applicant_name', ''),
                 'priority': project.get('priority', ''),
                 'status': project.get('status', ''),
                 'executor_name': project.get('executor_name', ''),
@@ -798,7 +1019,7 @@ class TaskViewModule:
             'status': 'status',
             'remarks': 'remarks',
             'serial_number': 'serial_number',
-            'applicant_name': 'software_applicant_name'  # 表单中的applicant_name对应数据库的software_applicant_name
+            'copyright_owner': 'copyright_owner' 
             # 注意：executor_name 暂时不映射，因为数据库中是 executor_id (INTEGER)，而表单中是文本
         }
         
@@ -978,14 +1199,780 @@ class TaskViewModule:
         except Exception as e:
             messagebox.showerror("错误", f"显示合同对话框失败: {str(e)}")
     
+    def _is_window_valid(self):
+        """检查窗口是否仍然有效"""
+        try:
+            # 尝试访问窗口属性来检查是否仍然有效
+            self.parent.winfo_exists()
+            return True
+        except tk.TclError:
+            return False
+    
+    def _safe_messagebox(self, title, message, msg_type="info"):
+        """安全的消息框显示，检查窗口有效性"""
+        if not self._is_window_valid():
+            print(f"[DEBUG] 窗口已销毁，跳过消息框: {title} - {message}")
+            return
+        
+        try:
+            if msg_type == "info":
+                messagebox.showinfo(title, message)
+            elif msg_type == "warning":
+                messagebox.showwarning(title, message)
+            elif msg_type == "error":
+                messagebox.showerror(title, message)
+            elif msg_type == "askyesno":
+                return messagebox.askyesno(title, message)
+        except tk.TclError:
+            print(f"[DEBUG] 消息框显示失败，窗口可能已销毁: {title}")
+            return None
+    
+
     def open_copyright_center(self):
         """打开国家版权保护中心网站"""
         try:
-            import webbrowser
-            url = "https://www.ccopyright.com.cn/"
-            webbrowser.open(url)
+            # 检测是否安装了Playwright
+            from desktop_app.serial_fetcher_simple import is_playwright_available
+            
+            if is_playwright_available() and self.use_playwright_browser.get():
+                # 使用Playwright打开版权中心
+                self._open_copyright_center_with_playwright()
+            else:
+                # 使用默认浏览器打开
+                import webbrowser
+                url = "https://register.ccopyright.com.cn/login.html"
+                webbrowser.open(url)
+                
         except Exception as e:
-            messagebox.showerror("错误", f"打开版权保护中心失败: {str(e)}")
+            self._safe_messagebox("错误", f"打开版权保护中心失败: {str(e)}", "error")
+    
+    def _open_copyright_center_with_playwright(self):
+        """使用Playwright打开版权保护中心"""
+        try:
+            print("[DEBUG] 开始_open_copyright_center_with_playwright方法")
+            
+            from playwright.sync_api import sync_playwright
+            from desktop_app.serial_fetcher_simple import get_valid_global_browser, set_global_browser, is_browser_instance_valid
+            
+            # 检查是否已有有效的浏览器实例
+            print("[DEBUG] 检查有效的全局浏览器实例")
+            context, page, instance, playwright_instance = get_valid_global_browser()
+            print(f"[DEBUG] 浏览器实例检查结果: context={bool(context)}, page={bool(page)}, instance={bool(instance)}")
+            
+            if context and page and instance:
+                # 复用现有浏览器实例
+                print("[DEBUG] 复用现有浏览器实例打开版权中心")
+                try:
+                    # 检查浏览器实例是否仍然有效
+                    if not is_browser_instance_valid(context, page, instance):
+                        print("[DEBUG] 浏览器实例已失效，清除并重新创建")
+                        from desktop_app.serial_fetcher_simple import clear_global_browser
+                        clear_global_browser()
+                        # 递归调用创建新实例
+                        print("[DEBUG] 递归调用_open_copyright_center_with_playwright")
+                        self._open_copyright_center_with_playwright()
+                        return
+                    
+                    # 尝试导航到目标页面
+                    print("[DEBUG] 导航到版权保护中心")
+                    page.goto("https://register.ccopyright.com.cn/login.html", wait_until='domcontentloaded', timeout=60000)
+                    page.wait_for_load_state('networkidle', timeout=10000)
+                    print("[DEBUG] 页面网络空闲")
+                    
+                    # 立即自动填充账号密码（如果已保存）
+                    try:
+                        print("[DEBUG] 检查是否有保存的账号密码")
+                        from desktop_app.credential_manager import load_credentials, has_credentials
+                        
+                        if has_credentials():
+                            print("[DEBUG] 发现保存的账号密码，立即开始自动填充")
+                            username, password = load_credentials()
+                            
+                            # 等待0.5秒后立即填充
+                            page.wait_for_timeout(500)
+                            
+                            # 尝试多种可能的用户名输入框选择器
+                            username_selectors = [
+                                'input[placeholder*="请输入用户名/手机号/邮箱"]'
+                            ]
+                            
+                            username_filled = False
+                            for selector in username_selectors:
+                                try:
+                                    page.wait_for_selector(selector, timeout=1000)
+                                    page.fill(selector, username)
+                                    print(f"[DEBUG] 用户名已填充到: {selector}")
+                                    username_filled = True
+                                    break
+                                except Exception:
+                                    continue
+                            
+                            if not username_filled:
+                                print("[DEBUG] 未找到用户名输入框")
+                            
+                            # 尝试多种可能的密码输入框选择器
+                            password_selectors = [
+                                'input[placeholder*="请输入密码"]'
+                            ]
+                            
+                            password_filled = False
+                            for selector in password_selectors:
+                                try:
+                                    page.wait_for_selector(selector, timeout=1000)
+                                    page.fill(selector, password)
+                                    print(f"[DEBUG] 密码已填充到: {selector}")
+                                    password_filled = True
+                                    break
+                                except Exception:
+                                    continue
+                            
+                            if not password_filled:
+                                print("[DEBUG] 未找到密码输入框")
+                            
+                            if username_filled and password_filled:
+                                print("[DEBUG] 账号密码自动填充完成")
+                            else:
+                                print("[DEBUG] 自动填充部分失败，请手动输入")
+                                
+                        else:
+                            print("[DEBUG] 没有保存的账号密码，请手动输入")
+                            
+                    except Exception as e:
+                        print(f"[DEBUG] 自动填充功能出错: {e}")
+                        print("[DEBUG] 请手动输入账号密码")
+                    
+                    self._safe_messagebox("提示", "已在现有浏览器中打开版权保护中心", "info")
+                except Exception as e:
+                    print(f"[DEBUG] 复用浏览器实例失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    # 检查是否是浏览器被关闭的错误
+                    if "Target page, context or browser has been closed" in str(e):
+                        print("[DEBUG] 检测到浏览器被关闭，清除实例并重新创建")
+                        from desktop_app.serial_fetcher_simple import clear_global_browser
+                        clear_global_browser()
+                        # 递归调用创建新实例
+                        print("[DEBUG] 递归调用_open_copyright_center_with_playwright")
+                        self._open_copyright_center_with_playwright()
+                        return
+                    else:
+                        # 其他错误，回退到默认浏览器
+                        print("[DEBUG] 其他错误，回退到默认浏览器")
+                        import webbrowser
+                        url = "https://register.ccopyright.com.cn/login.html"
+                        webbrowser.open(url)
+                        self._safe_messagebox("提示", f"Playwright打开失败，已使用默认浏览器打开\n\n错误: {str(e)}", "warning")
+                        return
+            else:
+                print("[DEBUG] 没有保存的浏览器实例")
+                # 创建新的浏览器实例 - 不使用with语句避免自动关闭
+                print("[DEBUG] 创建新浏览器实例打开版权中心")
+                
+                # 手动启动Playwright实例，不使用with语句
+                print("[DEBUG] 启动Playwright实例")
+                p = sync_playwright().start()
+                print("[DEBUG] Playwright实例启动完成")
+                
+                # 获取屏幕尺寸
+                import tkinter as tk
+                try:
+                    print("[DEBUG] 创建临时Tkinter根窗口以获取屏幕尺寸")
+                    root = tk.Tk()
+                    screen_width = root.winfo_screenwidth()
+                    screen_height = root.winfo_screenheight()
+                    print(f"[DEBUG] 屏幕尺寸: {screen_width}x{screen_height}")
+                    root.destroy()
+                    print("[DEBUG] 临时Tkinter根窗口已销毁")
+                except Exception as e:
+                    print(f"[DEBUG] 获取屏幕尺寸失败: {e}")
+                    screen_width = 1920
+                    screen_height = 1080
+                
+                # 启动浏览器（不使用持久化上下文）
+                print("[DEBUG] 启动Chromium浏览器")
+                
+                browser = p.chromium.launch(
+                    headless=False,
+                    args=[
+                        '--start-maximized',
+                        '--no-sandbox',
+                        '--disable-web-security',
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-dev-shm-usage',
+                        '--no-first-run',
+                    ]
+                )
+                print("[DEBUG] Chromium浏览器启动完成")
+                
+                # 创建新的上下文
+                print("[DEBUG] 创建浏览器上下文")
+                context = browser.new_context(
+                    viewport={'width': screen_width, 'height': screen_height},
+                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    locale='zh-CN',
+                    timezone_id='Asia/Shanghai',
+                )
+                print("[DEBUG] 浏览器上下文创建完成")
+                
+                # 创建新页面
+                print("[DEBUG] 创建新页面")
+                page = context.new_page()
+                print("[DEBUG] 新页面创建完成")
+                
+                # 设置页面视口为全屏
+                print("[DEBUG] 设置页面视口")
+                page.set_viewport_size({'width': screen_width, 'height': screen_height})
+                print("[DEBUG] 页面视口设置完成")
+                
+                # 添加增强的反检测脚本
+                print("[DEBUG] 注入反检测脚本")
+                try:
+                    page.evaluate("""
+                        (function() {
+                            // 1. 隐藏webdriver特征
+                            Object.defineProperty(navigator, 'webdriver', {
+                                get: () => undefined,
+                            });
+                            
+                            // 2. 隐藏自动化控制特征
+                            delete window.chrome;
+                            window.chrome = {
+                                runtime: {},
+                                loadTimes: function() {},
+                                csi: function() {},
+                                app: {}
+                            };
+                            
+                            // 3. 模拟真实的插件
+                            Object.defineProperty(navigator, 'plugins', {
+                                get: () => {
+                                    return [
+                                        {
+                                            0: {type: "application/x-google-chrome-pdf", suffixes: "pdf", description: "Portable Document Format", enabledPlugin: Plugin},
+                                            description: "Portable Document Format",
+                                            filename: "internal-pdf-viewer",
+                                            length: 1,
+                                            name: "Chrome PDF Plugin"
+                                        },
+                                        {
+                                            0: {type: "application/pdf", suffixes: "pdf", description: "", enabledPlugin: Plugin},
+                                            description: "",
+                                            filename: "mhjfbmdgcfjbbpaeojofohoefgiehjai",
+                                            length: 1,
+                                            name: "Chrome PDF Viewer"
+                                        },
+                                        {
+                                            0: {type: "application/x-nacl", suffixes: "", description: "Native Client Executable", enabledPlugin: Plugin},
+                                            1: {type: "application/x-pnacl", suffixes: "", description: "Portable Native Client Executable", enabledPlugin: Plugin},
+                                            description: "",
+                                            filename: "internal-nacl-plugin",
+                                            length: 2,
+                                            name: "Native Client"
+                                        }
+                                    ];
+                                },
+                            });
+                            
+                            // 4. 模拟真实的语言设置
+                            Object.defineProperty(navigator, 'languages', {
+                                get: () => ['zh-CN', 'zh', 'en'],
+                            });
+                            
+                            // 5. 隐藏自动化相关属性
+                            Object.defineProperty(navigator, 'permissions', {
+                                get: () => ({
+                                    query: () => Promise.resolve({ state: 'granted' })
+                                }),
+                            });
+                            
+                            // 6. 模拟真实的屏幕信息
+                            Object.defineProperty(screen, 'availHeight', {
+                                get: () => 1040,
+                            });
+                            Object.defineProperty(screen, 'availWidth', {
+                                get: () => 1920,
+                            });
+                            Object.defineProperty(screen, 'colorDepth', {
+                                get: () => 24,
+                            });
+                            Object.defineProperty(screen, 'height', {
+                                get: () => 1080,
+                            });
+                            Object.defineProperty(screen, 'width', {
+                                get: () => 1920,
+                            });
+                            
+                            // 7. 隐藏自动化痕迹
+                            Object.defineProperty(navigator, 'platform', {
+                                get: () => 'Win32',
+                            });
+                            
+                            // 8. 模拟真实的连接信息
+                            Object.defineProperty(navigator, 'connection', {
+                                get: () => ({
+                                    effectiveType: '4g',
+                                    rtt: 50,
+                                    downlink: 10,
+                                    saveData: false
+                                }),
+                            });
+                            
+                            // 9. 隐藏自动化相关的window属性
+                            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+                            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+                            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+                            
+                            // 10. 模拟真实的硬件并发数
+                            Object.defineProperty(navigator, 'hardwareConcurrency', {
+                                get: () => 8,
+                            });
+                            
+                            // 11. 模拟真实的设备内存
+                            Object.defineProperty(navigator, 'deviceMemory', {
+                                get: () => 8,
+                            });
+                            
+                            // 12. 隐藏自动化相关的document属性
+                            Object.defineProperty(document, 'hidden', {
+                                get: () => false,
+                            });
+                            
+                            // 13. 模拟真实的时区
+                            Object.defineProperty(Intl.DateTimeFormat.prototype, 'resolvedOptions', {
+                                value: function() {
+                                    return {
+                                        locale: 'zh-CN',
+                                        timeZone: 'Asia/Shanghai',
+                                        calendar: 'gregory',
+                                        numberingSystem: 'latn'
+                                    };
+                                }
+                            });
+                            
+                            // 14. 隐藏自动化相关的CSS媒体查询
+                            const originalMatchMedia = window.matchMedia;
+                            window.matchMedia = function(query) {
+                                if (query.includes('prefers-reduced-motion')) {
+                                    return { matches: false, media: query };
+                                }
+                                return originalMatchMedia.call(this, query);
+                            };
+                            
+                            // 15. 模拟真实的触摸支持
+                            Object.defineProperty(navigator, 'maxTouchPoints', {
+                                get: () => 0,
+                            });
+                            
+                            // 16. 隐藏自动化相关的错误处理
+                            const originalConsoleError = console.error;
+                            console.error = function(...args) {
+                                const message = args.join(' ');
+                                if (message.includes('webdriver') || 
+                                    message.includes('automation') || 
+                                    message.includes('selenium')) {
+                                    return;
+                                }
+                                originalConsoleError.apply(console, args);
+                            };
+                            
+                            // 17. 模拟真实的Canvas指纹
+                            const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+                            HTMLCanvasElement.prototype.toDataURL = function() {
+                                const context = this.getContext('2d');
+                                if (context) {
+                                    context.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                                    context.fillRect(0, 0, 1, 1);
+                                }
+                                return originalToDataURL.apply(this, arguments);
+                            };
+                            
+                            // 18. 隐藏自动化相关的WebGL指纹
+                            const originalGetParameter = WebGLRenderingContext.prototype.getParameter;
+                            WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                                if (parameter === 37445) { // UNMASKED_VENDOR_WEBGL
+                                    return 'Intel Inc.';
+                                }
+                                if (parameter === 37446) { // UNMASKED_RENDERER_WEBGL
+                                    return 'Intel(R) HD Graphics 620';
+                                }
+                                return originalGetParameter.apply(this, arguments);
+                            };
+                            
+                            // 19. 模拟真实的电池API
+                            if ('getBattery' in navigator) {
+                                navigator.getBattery = function() {
+                                    return Promise.resolve({
+                                        charging: true,
+                                        chargingTime: 0,
+                                        dischargingTime: Infinity,
+                                        level: 0.8
+                                    });
+                                };
+                            }
+                            
+                            // 20. 隐藏自动化相关的Notification API
+                            if ('Notification' in window) {
+                                Object.defineProperty(Notification, 'permission', {
+                                    get: () => 'default',
+                                });
+                            }
+                            
+                            console.log('[DEBUG] 增强反检测脚本已注入');
+                        })();
+                    """)
+                    print("[DEBUG] 增强反检测脚本注入成功")
+                except Exception as e:
+                    print(f"[DEBUG] 反检测脚本注入失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+                
+                # 页面加载完成后，检查是否需要自动填充
+                print("[DEBUG] 页面加载完成，检查自动填充")
+                try:
+                    page.evaluate("""
+                        (function() {
+                            console.log('[FONT-FIX] 开始增强字体修复（处理个人配置冲突）');
+                            
+                            // 1. 强制重置字体设置
+                            function resetFontSettings() {
+                                try {
+                                    // 重置所有元素的字体设置
+                                    const allElements = document.querySelectorAll('*');
+                                    allElements.forEach(function(element) {
+                                        element.style.fontFamily = '';
+                                        element.style.fontSize = '';
+                                        element.style.fontWeight = '';
+                                        element.style.fontStyle = '';
+                                    });
+                                    
+                                    // 重置body和html
+                                    if (document.body) {
+                                        document.body.style.fontFamily = '';
+                                        document.body.style.fontSize = '';
+                                    }
+                                    if (document.documentElement) {
+                                        document.documentElement.style.fontFamily = '';
+                                    }
+                                    
+                                    console.log('[FONT-FIX] 字体设置已重置');
+                                } catch (e) {
+                                    console.log('[FONT-FIX] 重置字体设置失败:', e);
+                                }
+                            }
+                            
+                            // 2. 强制应用中文字体
+                            function forceChineseFont() {
+                                try {
+                                    // 创建强力的CSS样式
+                                    const style = document.createElement('style');
+                                    style.id = 'enhanced-font-fix-style';
+                                    style.textContent = `
+                                        * {
+                                            font-family: "Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif !important;
+                                            font-size: inherit !important;
+                                        }
+                                        body {
+                                            font-family: "Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif !important;
+                                            font-size: 14px !important;
+                                        }
+                                        html {
+                                            font-family: "Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif !important;
+                                        }
+                                        div, span, p, a, li, td, th, h1, h2, h3, h4, h5, h6, label, input, button, textarea, select {
+                                            font-family: "Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif !important;
+                                        }
+                                    `;
+                                    
+                                    // 移除旧的样式
+                                    const oldStyle = document.getElementById('enhanced-font-fix-style');
+                                    if (oldStyle) {
+                                        oldStyle.remove();
+                                    }
+                                    
+                                    document.head.appendChild(style);
+                                    
+                                    // 强制设置所有元素的字体
+                                    const allElements = document.querySelectorAll('*');
+                                    allElements.forEach(function(element) {
+                                        element.style.fontFamily = '"Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif';
+                                        element.style.fontSize = element.style.fontSize || '14px';
+                                    });
+                                    
+                                    console.log('[FONT-FIX] 中文字体已强制应用');
+                                } catch (e) {
+                                    console.log('[FONT-FIX] 应用中文字体失败:', e);
+                                }
+                            }
+                            
+                            // 3. 设置页面编码
+                            function setPageEncoding() {
+                                try {
+                                    if (!document.querySelector('meta[charset]')) {
+                                        const meta = document.createElement('meta');
+                                        meta.setAttribute('charset', 'UTF-8');
+                                        document.head.appendChild(meta);
+                                    }
+                                    console.log('[FONT-FIX] 页面编码已设置');
+                                } catch (e) {
+                                    console.log('[FONT-FIX] 设置页面编码失败:', e);
+                                }
+                            }
+                            
+                            // 4. 执行修复流程
+                            function executeFontFix() {
+                                console.log('[FONT-FIX] 开始执行修复流程');
+                                
+                                // 步骤1：重置字体设置
+                                resetFontSettings();
+                                
+                                // 步骤2：设置页面编码
+                                setPageEncoding();
+                                
+                                // 步骤3：强制应用中文字体
+                                setTimeout(function() {
+                                    forceChineseFont();
+                                }, 100);
+                                
+                                console.log('[FONT-FIX] 修复流程执行完成');
+                            }
+                            
+                            // 5. 立即执行修复
+                            executeFontFix();
+                            
+                            // 6. 页面加载后再次修复
+                            if (document.readyState === 'complete') {
+                                setTimeout(executeFontFix, 1000);
+                            } else {
+                                window.addEventListener('load', function() {
+                                    setTimeout(executeFontFix, 1000);
+                                });
+                            }
+                            
+                            console.log('[FONT-FIX] 增强字体修复脚本注入成功');
+                        })();
+                    """)
+                    print("[DEBUG] 增强字体修复脚本注入成功")
+                        
+                except Exception as e:
+                    print(f"[DEBUG] 增强字体修复脚本注入失败: {e}")
+                
+                # 导航到版权中心（增加人类行为模拟）
+                print("[DEBUG] 开始导航到版权中心")
+                import random
+                try:
+                    # 增加随机延迟，模拟人类行为
+                    delay = random.uniform(1, 1.5)
+                    print(f"[DEBUG] 等待 {delay:.1f} 秒后导航...")
+                    page.wait_for_timeout(int(delay * 1000))
+                    
+                    print("[DEBUG] 执行页面导航")
+                    page.goto("https://register.ccopyright.com.cn/login.html", wait_until='domcontentloaded', timeout=60000)
+                    print("[DEBUG] 页面加载完成")
+
+                    page.wait_for_load_state('networkidle', timeout=10000)
+                    print("[DEBUG] 页面网络空闲")
+                    
+                    # 立即自动填充账号密码（如果已保存）
+                    try:
+                        print("[DEBUG] 检查是否有保存的账号密码")
+                        from desktop_app.credential_manager import load_credentials, has_credentials
+                        
+                        if has_credentials():
+                            print("[DEBUG] 发现保存的账号密码，立即开始自动填充")
+                            username, password = load_credentials()
+                            
+                            # 等待0.5秒后立即填充
+                            page.wait_for_timeout(500)
+                            
+                            # 尝试多种可能的用户名输入框选择器
+                            username_selectors = [
+                                'input[placeholder*="请输入用户名/手机号/邮箱"]'
+                            ]
+                            
+                            username_filled = False
+                            for selector in username_selectors:
+                                try:
+                                    page.wait_for_selector(selector, timeout=1000)
+                                    page.fill(selector, username)
+                                    print(f"[DEBUG] 用户名已填充到: {selector}")
+                                    username_filled = True
+                                    break
+                                except Exception:
+                                    continue
+                            
+                            if not username_filled:
+                                print("[DEBUG] 未找到用户名输入框")
+                            
+                            # 尝试多种可能的密码输入框选择器
+                            password_selectors = [
+                                'input[placeholder*="请输入密码"]',
+                                'input[name="password"]',
+                                'input[name="pwd"]',
+                                'input[type="password"]',
+                                'input[placeholder*="密码"]'
+                            ]
+                            
+                            password_filled = False
+                            for selector in password_selectors:
+                                try:
+                                    page.wait_for_selector(selector, timeout=1000)
+                                    page.fill(selector, password)
+                                    print(f"[DEBUG] 密码已填充到: {selector}")
+                                    password_filled = True
+                                    break
+                                except Exception:
+                                    continue
+                            
+                            if not password_filled:
+                                print("[DEBUG] 未找到密码输入框")
+                            
+                            if username_filled and password_filled:
+                                print("[DEBUG] 账号密码自动填充完成")
+                                print("[DEBUG] 请手动点击登录按钮")
+                            else:
+                                print("[DEBUG] 自动填充部分失败，请手动输入")
+                                
+                        else:
+                            print("[DEBUG] 没有保存的账号密码，请手动输入")
+                            
+                    except Exception as e:
+                        print(f"[DEBUG] 自动填充功能出错: {e}")
+                        print("[DEBUG] 请手动输入账号密码")
+                    
+                    # 页面加载完成后增强字体修复
+                    print("[DEBUG] 页面加载完成后增强字体修复")
+                    try:
+                        page.evaluate("""
+                            (function() {
+                                console.log('[FONT-FIX] 页面加载后开始增强字体修复');
+                                
+                                // 强制重置字体设置
+                                function resetFontSettings() {
+                                    try {
+                                        const allElements = document.querySelectorAll('*');
+                                        allElements.forEach(function(element) {
+                                            element.style.fontFamily = '';
+                                            element.style.fontSize = '';
+                                            element.style.fontWeight = '';
+                                            element.style.fontStyle = '';
+                                        });
+                                        
+                                        if (document.body) {
+                                            document.body.style.fontFamily = '';
+                                            document.body.style.fontSize = '';
+                                        }
+                                        if (document.documentElement) {
+                                            document.documentElement.style.fontFamily = '';
+                                        }
+                                        
+                                        console.log('[FONT-FIX] 页面加载后字体设置已重置');
+                                    } catch (e) {
+                                        console.log('[FONT-FIX] 页面加载后重置字体设置失败:', e);
+                                    }
+                                }
+                                
+                                // 强制应用中文字体
+                                function forceChineseFont() {
+                                    try {
+                                        const style = document.createElement('style');
+                                        style.id = 'enhanced-font-fix-style-post-load';
+                                        style.textContent = `
+                                            * {
+                                                font-family: "Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif !important;
+                                            }
+                                            body {
+                                                font-family: "Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif !important;
+                                            }
+                                            html {
+                                                font-family: "Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif !important;
+                                            }
+                                        `;
+                                        
+                                        document.head.appendChild(style);
+                                        
+                                        const allElements = document.querySelectorAll('*');
+                                        allElements.forEach(function(element) {
+                                            element.style.fontFamily = '"Microsoft YaHei", "SimSun", "SimHei", "Arial", sans-serif';
+                                            element.style.fontSize = element.style.fontSize || '14px';
+                                        });
+                                        
+                                        console.log('[FONT-FIX] 页面加载后中文字体已强制应用');
+                                    } catch (e) {
+                                        console.log('[FONT-FIX] 页面加载后应用中文字体失败:', e);
+                                    }
+                                }
+                                
+                                // 执行修复流程
+                                resetFontSettings();
+                                setTimeout(forceChineseFont, 100);
+                                setTimeout(forceChineseFont, 500);
+                                
+                                console.log('[FONT-FIX] 页面加载后增强字体修复完成');
+                            })();
+                        """)
+                        print("[DEBUG] 页面加载后增强字体修复成功")
+                    except Exception as e:
+                        print(f"[DEBUG] 页面加载后增强字体修复失败: {e}")
+                    
+                    
+                except Exception as e:
+                    print(f"[DEBUG] 导航失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    # 检查是否是浏览器被关闭的错误
+                    if "Target page, context or browser has been closed" in str(e):
+                        print("[DEBUG] 检测到浏览器被关闭，清理实例")
+                        try:
+                            browser.close()
+                        except:
+                            pass
+                        try:
+                            p.stop()
+                        except:
+                            pass
+                        # 回退到默认浏览器
+                        import webbrowser
+                        url = "https://register.ccopyright.com.cn/login.html"
+                        webbrowser.open(url)
+                        self._safe_messagebox("提示", f"浏览器被意外关闭，已使用默认浏览器打开\n\n错误: {str(e)}", "warning")
+                        return
+                    else:
+                        # 其他错误，继续抛出
+                        raise e
+                
+                # 保存浏览器实例和Playwright实例
+                print("[DEBUG] 保存全局浏览器实例")
+                set_global_browser(browser, page, browser, p)
+                print("[DEBUG] 全局浏览器实例保存完成")
+                
+            print("[DEBUG] _open_copyright_center_with_playwright方法执行完成")
+                    
+        except Exception as e:
+            print(f"[DEBUG] 使用Playwright打开版权中心失败: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            # 检查是否是浏览器被关闭的错误
+            if "Target page, context or browser has been closed" in str(e):
+                print("[DEBUG] 检测到浏览器被关闭错误，清理全局实例")
+                try:
+                    from desktop_app.serial_fetcher_simple import clear_global_browser
+                    clear_global_browser()
+                except:
+                    pass
+                # 回退到默认浏览器
+                import webbrowser
+                url = "https://register.ccopyright.com.cn/login.html"
+                webbrowser.open(url)
+                self._safe_messagebox("提示", f"浏览器被意外关闭，已使用默认浏览器打开\n\n错误: {str(e)}", "warning")
+            else:
+                # 其他错误，回退到默认浏览器
+                import webbrowser
+                url = "https://register.ccopyright.com.cn/login.html"
+                webbrowser.open(url)
+                self._safe_messagebox("提示", f"Playwright打开失败，已使用默认浏览器打开\n\n错误: {str(e)}", "warning")
     
     def open_company_website(self):
         """打开公司网站"""
@@ -1128,33 +2115,195 @@ class TaskViewModule:
     def mark_as_executing(self):
         """标记为执行中"""
         if not self.selected_project:
-            messagebox.showwarning("警告", "请先选择一个项目")
+            self._safe_messagebox("警告", "请先选择一个项目", "warning")
             return
         
         try:
             project_id = self.selected_project.get('id')
+            
+            # 更新本地数据库
             self.local_project.update_project_status(project_id, '执行中')
-            messagebox.showinfo("成功", "项目状态已更新为执行中")
+            
+            # 更新服务器数据库
+            server_updated = False
+            if self.server_client and hasattr(self.server_client, 'update_project_status'):
+                try:
+                    ok, msg = self.server_client.update_project_status(project_id, '执行中')
+                    server_updated = bool(ok)
+                    if not ok:
+                        print(f"[DEBUG] 服务器状态更新失败: {msg}")
+                except Exception as e:
+                    print(f"[DEBUG] 服务器状态更新异常: {e}")
+                    server_updated = False
+            
+            # 更新UI显示
             self.refresh_projects()
+            
+            # 显示结果
+            if server_updated:
+                self._safe_messagebox("成功", "项目状态已更新为执行中（已同步到服务器）", "info")
+            else:
+                self._safe_messagebox("成功", "项目状态已更新为执行中（本地更新成功，服务器同步失败）", "info")
+                
         except Exception as e:
-            messagebox.showerror("错误", f"更新项目状态失败: {str(e)}")
+            print(f"[DEBUG] 标记执行中失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self._safe_messagebox("错误", f"更新项目状态失败: {str(e)}", "error")
+    
+    def mark_as_charged(self):
+        """标记为收费"""
+        if not self.selected_project:
+            self._safe_messagebox("警告", "请先选择一个项目", "warning")
+            return
+        
+        try:
+            project_id = self.selected_project.get('id')
+            
+            # 更新服务器数据库（收费标记）
+            server_updated = False
+            if self.server_client and hasattr(self.server_client, 'settle_project'):
+                try:
+                    ok, msg = self.server_client.settle_project(project_id)
+                    server_updated = bool(ok)
+                    if not ok:
+                        print(f"[DEBUG] 服务器收费标记失败: {msg}")
+                        self._safe_messagebox("错误", f"收费标记失败: {msg}", "error")
+                        return
+                except Exception as e:
+                    print(f"[DEBUG] 服务器收费标记异常: {e}")
+                    self._safe_messagebox("错误", f"收费标记失败: {str(e)}", "error")
+                    return
+            
+            # 更新本地数据库
+            try:
+                # 更新本地项目的收费状态
+                self.local_project.update_project_settled(project_id, True)
+            except Exception as e:
+                print(f"[DEBUG] 本地收费状态更新失败: {e}")
+            
+            # 更新UI显示
+            self.refresh_projects()
+            
+            # 显示结果
+            if server_updated:
+                self._safe_messagebox("成功", "项目已标记为收费（已同步到服务器）", "info")
+            else:
+                self._safe_messagebox("成功", "项目已标记为收费（本地更新成功，服务器同步失败）", "info")
+                
+        except Exception as e:
+            print(f"[DEBUG] 标记收费失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self._safe_messagebox("错误", f"更新项目收费状态失败: {str(e)}", "error")
+    
+    def mark_as_archived(self):
+        """标记为归档"""
+        if not self.selected_project:
+            self._safe_messagebox("警告", "请先选择一个项目", "warning")
+            return
+        
+        try:
+            project_id = self.selected_project.get('id')
+            
+            # 检查项目是否已收费
+            project_data = self.local_project.get_project_by_id(project_id)
+            if project_data and not project_data.get('is_settled', False):
+                self._safe_messagebox("警告", "项目尚未收费，无法归档\n\n请先标记为收费", "warning")
+                return
+            
+            # 确认归档操作
+            result = self._safe_messagebox(
+                "确认归档", 
+                f"确定要归档项目：{self.selected_project.get('project_name', '未知项目')}？\n\n"
+                f"归档后项目将从活动列表移动到归档列表，此操作不可撤销。",
+                "askyesno"
+            )
+            
+            if not result:
+                return
+            
+            # 更新服务器数据库（归档操作）
+            server_updated = False
+            if self.server_client and hasattr(self.server_client, 'archive_project'):
+                try:
+                    ok, msg = self.server_client.archive_project(project_id)
+                    server_updated = bool(ok)
+                    if not ok:
+                        print(f"[DEBUG] 服务器归档失败: {msg}")
+                        self._safe_messagebox("错误", f"归档失败: {msg}", "error")
+                        return
+                except Exception as e:
+                    print(f"[DEBUG] 服务器归档异常: {e}")
+                    self._safe_messagebox("错误", f"归档失败: {str(e)}", "error")
+                    return
+            
+            # 更新本地数据库
+            try:
+                # 从本地数据库中删除项目（因为已归档）
+                self.local_project.delete_project(project_id)
+            except Exception as e:
+                print(f"[DEBUG] 本地项目删除失败: {e}")
+            
+            # 清空选中项目
+            self.selected_project = None
+            
+            # 更新UI显示
+            self.refresh_projects()
+            
+            # 显示结果
+            if server_updated:
+                self._safe_messagebox("成功", "项目已归档（已同步到服务器）", "info")
+            else:
+                self._safe_messagebox("成功", "项目已归档（本地更新成功，服务器同步失败）", "info")
+                
+        except Exception as e:
+            print(f"[DEBUG] 归档失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self._safe_messagebox("错误", f"归档项目失败: {str(e)}", "error")
     
     def mark_as_completed(self):
         """标记为已完成"""
         if not self.selected_project:
-            messagebox.showwarning("警告", "请先选择一个项目")
+            self._safe_messagebox("警告", "请先选择一个项目", "warning")
             return
         
         try:
             project_id = self.selected_project.get('id')
+            
+            # 更新本地数据库
             self.local_project.update_project_status(project_id, '已完成')
-            messagebox.showinfo("成功", "项目状态已更新为已完成")
+            
+            # 更新服务器数据库
+            server_updated = False
+            if self.server_client and hasattr(self.server_client, 'update_project_status'):
+                try:
+                    ok, msg = self.server_client.update_project_status(project_id, '已完成')
+                    server_updated = bool(ok)
+                    if not ok:
+                        print(f"[DEBUG] 服务器状态更新失败: {msg}")
+                except Exception as e:
+                    print(f"[DEBUG] 服务器状态更新异常: {e}")
+                    server_updated = False
+            
+            # 更新UI显示
             self.refresh_projects()
+            
+            # 显示结果
+            if server_updated:
+                self._safe_messagebox("成功", "项目状态已更新为已完成（已同步到服务器）", "info")
+            else:
+                self._safe_messagebox("成功", "项目状态已更新为已完成（本地更新成功，服务器同步失败）", "info")
+                
         except Exception as e:
-            messagebox.showerror("错误", f"更新项目状态失败: {str(e)}")
+            print(f"[DEBUG] 标记已完成失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self._safe_messagebox("错误", f"更新项目状态失败: {str(e)}", "error")
     
     def fetch_serial_number(self):
-        """获取流水号（占位实现，可扩展为从网页解析或API获取）"""
+        """获取流水号 - 支持浏览器实例检测和复用"""
         if not self.selected_project:
             messagebox.showwarning("警告", "请先选择一个项目")
             return
@@ -1169,17 +2318,138 @@ class TaskViewModule:
                 messagebox.showwarning("提示", "当前项目缺少项目名称，无法匹配网页上的项目记录")
                 return
             
-            # 2) 通过已登录的浏览器页面抓取流水号（用户需事先在版权中心登录并进入用户中心）
-            serial = fetch_serial_for_project(project_name, applicant_name)
+            # 2) 检测是否已有浏览器实例
+            from desktop_app.serial_fetcher_simple import get_valid_global_browser, is_playwright_available
             
-            if not serial:
-                messagebox.showwarning(
-                    "获取流水号",
-                    "未在当前网页中找到匹配的项目，请确认已登录版权保护中心并进入用户中心，且页面包含该项目。"
-                )
+            if not is_playwright_available():
+                self._safe_messagebox("错误", "系统未安装Playwright，无法自动获取流水号\n\n请先安装Playwright：\npip install playwright\nplaywright install", "error")
                 return
             
-            # 3) 回填到界面
+            context, page, instance, playwright_instance = get_valid_global_browser()
+            
+            if context and page and instance:
+                # 已有浏览器实例，检查是否已登录版权中心
+                print("[DEBUG] 检测到现有浏览器实例")
+                
+                # 检查当前页面是否在版权中心
+                try:
+                    current_url = page.url
+                    if 'ccopyright.com.cn' in current_url:
+                        # 已在版权中心，检查登录状态
+                        from desktop_app.serial_fetcher_simple import _check_login_status
+                        is_logged_in = _check_login_status(page)
+                        
+                        if is_logged_in:
+                            # 已登录，直接获取流水号
+                            print("[DEBUG] 检测到已登录版权中心，直接获取流水号")
+                            serial = fetch_serial_for_project(project_name, applicant_name, reuse_browser=True, use_temp_profile=True)
+                        else:
+                            # 未登录，提示用户登录
+                            print("[DEBUG] 检测到未登录版权中心")
+                            result = self._safe_messagebox(
+                                "登录确认", 
+                                f"检测到浏览器已打开版权中心但未登录\n\n"
+                                f"请完成以下步骤：\n"
+                                f"1. 在浏览器中登录版权中心\n"
+                                f"2. 进入软件登记页面\n"
+                                f"3. 点击'是'开始搜索项目：{project_name}\n"
+                                f"4. 点击'否'取消操作",
+                                "askyesno"
+                            )
+                            if result:
+                                serial = fetch_serial_for_project(project_name, applicant_name, reuse_browser=True, use_temp_profile=True)
+                            else:
+                                return
+                    else:
+                        # 不在版权中心，导航到版权中心
+                        print("[DEBUG] 浏览器不在版权中心，导航到版权中心")
+                        result = self._safe_messagebox(
+                            "导航确认", 
+                            f"检测到浏览器已打开但不在版权中心\n\n"
+                            f"是否导航到版权中心并登录？\n\n"
+                            f"点击'是'：导航到版权中心\n"
+                            f"点击'否'：取消操作",
+                            "askyesno"
+                        )
+                        if result:
+                            # 导航到版权中心
+                            page.goto("https://register.ccopyright.com.cn/login.html", wait_until='domcontentloaded', timeout=60000)
+                            page.wait_for_load_state('networkidle', timeout=30000)
+                            
+                            # 提示用户登录
+                            self._safe_messagebox(
+                                "登录提示", 
+                                f"已导航到版权中心\n\n"
+                                f"请完成以下步骤：\n"
+                                f"1. 在浏览器中登录版权中心\n"
+                                f"2. 进入软件登记页面\n"
+                                f"3. 然后再次点击'获取流水号'按钮",
+                                "info"
+                            )
+                            return
+                        else:
+                            return
+                except Exception as e:
+                    print(f"[DEBUG] 使用现有浏览器实例失败: {e}")
+                    # 清除失效的实例并创建新的
+                    from desktop_app.serial_fetcher_simple import clear_global_browser
+                    clear_global_browser()
+                    # 创建新实例并获取流水号
+                    serial = fetch_serial_for_project(project_name, applicant_name, reuse_browser=False, use_temp_profile=True)
+                    if not serial:
+                        self._safe_messagebox(
+                            "获取流水号",
+                            f"未找到项目'{project_name}'的流水号\n\n请确认：\n1. 项目名称是否正确\n2. 项目是否已在版权中心登记\n3. 是否在正确的页面（软件登记）",
+                            "warning"
+                        )
+                        return
+                    
+                    # 更新UI和数据库
+                    if 'serial_number' in self.info_entries:
+                        try:
+                            self.info_entries['serial_number'].delete(0, tk.END)
+                            self.info_entries['serial_number'].insert(0, str(serial))
+                        except Exception:
+                            pass
+                    
+                    try:
+                        self.selected_project['serial_number'] = serial
+                    except Exception:
+                        pass
+                    
+                    server_updated = False
+                    if self.server_client and hasattr(self.server_client, 'update_project_serial'):
+                        try:
+                            ok, msg = self.server_client.update_project_serial(project_id, serial)
+                            server_updated = bool(ok)
+                        except Exception:
+                            traceback.print_exc()
+                            server_updated = False
+                    
+                    if server_updated:
+                        self._safe_messagebox("获取流水号", f"流水号已获取并同步：{serial}", "info")
+                    else:
+                        self._safe_messagebox(
+                            "获取流水号",
+                            f"流水号已获取并回填：{serial}。服务器同步未完成或接口不可用，可稍后再试。",
+                            "info"
+                        )
+                    return
+            else:
+                # 没有浏览器实例，创建新的
+                print("[DEBUG] 没有现有浏览器实例，创建新的")
+                serial = fetch_serial_for_project(project_name, applicant_name, reuse_browser=False, use_temp_profile=True)
+            
+            # 3) 处理获取结果
+            if not serial:
+                self._safe_messagebox(
+                    "获取流水号",
+                    f"未找到项目'{project_name}'的流水号\n\n请确认：\n1. 项目名称是否正确\n2. 项目是否已在版权中心登记\n3. 是否在正确的页面（软件登记）",
+                    "warning"
+                )
+                return
+
+            # 4) 回填到界面
             if 'serial_number' in self.info_entries:
                 try:
                     self.info_entries['serial_number'].delete(0, tk.END)
@@ -1193,7 +2463,7 @@ class TaskViewModule:
             except Exception:
                 pass
             
-            # 4) 更新到服务器（如可用）
+            # 5) 更新到服务器（如可用）
             server_updated = False
             if self.server_client and hasattr(self.server_client, 'update_project_serial'):
                 try:
@@ -1203,14 +2473,15 @@ class TaskViewModule:
                     traceback.print_exc()
                     server_updated = False
             
-            # 5) 结果提示
+            # 6) 结果提示
             if server_updated:
-                messagebox.showinfo("获取流水号", f"流水号已获取并同步：{serial}")
+                self._safe_messagebox("获取流水号", f"流水号已获取并同步：{serial}", "info")
             else:
-                messagebox.showinfo(
+                self._safe_messagebox(
                     "获取流水号",
-                    f"流水号已获取并回填：{serial}。服务器同步未完成或接口不可用，可稍后再试。"
+                    f"流水号已获取并回填：{serial}。服务器同步未完成或接口不可用，可稍后再试。",
+                    "info"
                 )
         except Exception as e:
             traceback.print_exc()
-            messagebox.showerror("错误", f"获取流水号失败: {str(e)}")
+            self._safe_messagebox("错误", f"获取流水号失败: {str(e)}", "error")

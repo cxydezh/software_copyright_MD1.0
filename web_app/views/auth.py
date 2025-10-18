@@ -33,6 +33,15 @@ def login():
             user = User.query.filter_by(email=email).first()
         
         if user and user.check_password(password):
+            # 检查员工账号审核状态
+            if user_type == 'staff' and hasattr(user, 'is_staff_account') and user.is_staff_account:
+                if user.approval_status == 'pending':
+                    flash('您的员工账号申请正在审核中，请耐心等待系统管理员审核。', 'warning')
+                    return render_template('auth/login.html')
+                elif user.approval_status == 'rejected':
+                    flash('您的员工账号申请已被驳回，请联系系统管理员了解详情。', 'danger')
+                    return render_template('auth/login.html')
+            
             login_user(user, remember=True)
             user.user_type = user_type
             session['user_type'] = user_type
@@ -61,6 +70,8 @@ def register():
         phone = request.form.get('phone')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+        is_staff_account = request.form.get('is_staff_account') == 'on'
+        application_reason = request.form.get('application_reason', '').strip()
         
         # 验证输入
         if not all([name, email, password, confirm_password]):
@@ -71,36 +82,59 @@ def register():
             flash('两次输入的密码不一致', 'danger')
             return render_template('auth/register.html')
         
-        # 检查邮箱是否已存在
-        if User.query.filter_by(email=email).first():
+        # 员工账号需要申请理由
+        if is_staff_account and not application_reason:
+            flash('申请员工账号需要填写申请理由', 'danger')
+            return render_template('auth/register.html')
+        
+        # 检查邮箱是否已存在（检查User和Staff表）
+        if User.query.filter_by(email=email).first() or Staff.query.filter_by(email=email).first():
             flash('该邮箱已被注册', 'danger')
             return render_template('auth/register.html')
         
         # 创建新用户
         try:
-            # 生成验证码
-            verification_code = generate_verification_code()
-            code_expires = datetime.utcnow() + timedelta(minutes=5)
-            
-            new_user = User(
-                name=name,
-                email=email,
-                phone=phone,
-                email_verification_code=verification_code,
-                email_verification_code_expires=code_expires
-            )
-            new_user.set_password(password)
-            
-            db.session.add(new_user)
-            db.session.commit()
-            
-            # 发送验证码邮件
-            if send_verification_code(new_user, verification_code):
-                flash('注册成功！验证码已发送到您的邮箱，请查收并完成验证。', 'success')
-                return redirect(url_for('auth.verify_code', user_id=new_user.id))
-            else:
-                flash('注册成功，但验证码邮件发送失败。请联系管理员。', 'warning')
+            if is_staff_account:
+                # 创建员工账号
+                new_staff = Staff(
+                    name=name,
+                    email=email,
+                    phone=phone,
+                    is_staff_account=True,
+                    approval_status='pending',
+                    application_reason=application_reason
+                )
+                new_staff.set_password(password)
+                
+                db.session.add(new_staff)
+                db.session.commit()
+                
+                flash('员工账号注册成功！您的申请已提交，等待系统管理员审核。审核通过后您将收到邮件通知。', 'success')
                 return redirect(url_for('auth.login'))
+            else:
+                # 创建普通用户
+                verification_code = generate_verification_code()
+                code_expires = datetime.utcnow() + timedelta(minutes=5)
+                
+                new_user = User(
+                    name=name,
+                    email=email,
+                    phone=phone,
+                    email_verification_code=verification_code,
+                    email_verification_code_expires=code_expires
+                )
+                new_user.set_password(password)
+                
+                db.session.add(new_user)
+                db.session.commit()
+                
+                # 发送验证码邮件
+                if send_verification_code(new_user, verification_code):
+                    flash('注册成功！验证码已发送到您的邮箱，请查收并完成验证。', 'success')
+                    return redirect(url_for('auth.verify_code', user_id=new_user.id))
+                else:
+                    flash('注册成功，但验证码邮件发送失败。请联系管理员。', 'warning')
+                    return redirect(url_for('auth.login'))
             
         except Exception as e:
             db.session.rollback()

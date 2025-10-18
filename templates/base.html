@@ -160,6 +160,10 @@
                                     {% if current_user.position is defined and current_user.position and current_user.position.position == '项目执行者' %}
                                     <li><a class="dropdown-item" href="{{ url_for('staff.executor_dashboard') }}">执行者工作台</a></li>
                                     {% endif %}
+                                    {% if current_user.position is defined and current_user.position and current_user.position.position == '系统管理员' %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('staff.user_management') }}">用户管理</a></li>
+                                    {% endif %}
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('auth.choose_role') }}">切换身份</a></li>

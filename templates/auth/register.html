@@ -85,6 +85,22 @@
                             </div>
                         </div>
                         
+                        <!-- 员工账号选项 -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="is_staff_account" name="is_staff_account">
+                            <label class="form-check-label" for="is_staff_account">
+                                我是公司员工，申请员工账号
+                            </label>
+                        </div>
+                        
+                        <!-- 申请理由（仅员工账号显示） -->
+                        <div class="mb-3" id="application_reason_div" style="display: none;">
+                            <label for="application_reason" class="form-label">申请理由</label>
+                            <textarea class="form-control" id="application_reason" name="application_reason" 
+                                      rows="3" placeholder="请说明申请员工账号的理由"></textarea>
+                            <div class="form-text">员工账号需要经过系统管理员审核通过后才能使用</div>
+                        </div>
+                        
                         <!-- 服务协议 -->
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="agreement" required>
@@ -121,6 +137,7 @@
                     <ul class="list-unstyled small mb-0">
                         <li>注册成功后，您可以申请软件著作权登记项目</li>
                         <li>我们会通过邮箱和短信通知您项目进度</li>
+                        <li>员工账号需要经过系统管理员审核通过后才能使用工作台</li>
                         <li>如有问题，请联系客服：188 3826 9405</li>
                     </ul>
                 </div>
@@ -228,6 +245,21 @@
     document.getElementById('password').addEventListener('input', checkPasswordMatch);
     document.getElementById('confirm_password').addEventListener('input', checkPasswordMatch);
     
+    // 员工账号选项切换
+    document.getElementById('is_staff_account').addEventListener('change', function() {
+        const reasonDiv = document.getElementById('application_reason_div');
+        const reasonInput = document.getElementById('application_reason');
+        
+        if (this.checked) {
+            reasonDiv.style.display = 'block';
+            reasonInput.required = true;
+        } else {
+            reasonDiv.style.display = 'none';
+            reasonInput.required = false;
+            reasonInput.value = '';
+        }
+    });
+    
     // 手机号验证
     document.getElementById('phone').addEventListener('input', function() {
         const phone = this.value;
@@ -245,6 +277,8 @@
         const password = document.getElementById('password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
         const agreement = document.getElementById('agreement').checked;
+        const isStaffAccount = document.getElementById('is_staff_account').checked;
+        const applicationReason = document.getElementById('application_reason').value;
         
         if (password !== confirmPassword) {
             e.preventDefault();
@@ -255,6 +289,12 @@
         if (!agreement) {
             e.preventDefault();
             alert('请阅读并同意用户服务协议和隐私政策');
+            return false;
+        }
+        
+        if (isStaffAccount && !applicationReason.trim()) {
+            e.preventDefault();
+            alert('申请员工账号需要填写申请理由');
             return false;
         }
         

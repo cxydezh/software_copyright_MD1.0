@@ -77,27 +77,26 @@ config = {
 
 # 本地客户端配置
 LOCAL_CONFIG = {
-    'LOCAL_DB_PATH': 'D:/SoftwareCopyrightMS/Database/local.db',
-    'BASE_DIR': 'D:/SoftwareCopyrightMS',
-    'USCCC_DIR': 'D:/SoftwareCopyrightMS/USCCC',
-    'IDPDF_DIR': 'D:/SoftwareCopyrightMS/IDPDF',
-    'MODEL_DIR': 'D:/SoftwareCopyrightMS/templates',
-    'CONTRACT_DIR': 'D:/SoftwareCopyrightMS/model/contract',
-    'MATERIAL_DIR': 'D:/SoftwareCopyrightMS/model/material',
-    'PROJECT_FILE_DIR': 'D:/SoftwareCopyrightMS/ProjectFile',
+    # 本地数据库路径（SQLite）
+    'LOCAL_DB_PATH': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'local.db'),
     
-    # 网站链接（按要求更改）
-    'COMPANY_WEBSITE': 'http://192.168.31.56:5000',
-    'COPYRIGHT_CENTER_URL': 'https://www.ccopyright.com.cn/',
-
-    # 数据库（MySQL）默认连接信息（仅用于 DB 层，不用于 HTTP API）
-    'SERVER_HOST': '127.0.0.1',  # DB host
-    'SERVER_PORT': 3306,         # DB port
-
-    # Web API（Flask 服务）默认连接信息（桌面端 HTTP 调用）
-    'WEB_API_HOST': 'http://192.168.31.56',
-    'WEB_API_PORT': 5000,
-    'API_BASE': 'http://192.168.31.56:5000',
+    # 本地文件目录
+    'BASE_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS'),
+    'USCCC_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'USCCC'),
+    'IDPDF_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'IDPDF'),
+    'MODEL_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'templates'),
+    'CONTRACT_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'model', 'contract'),
+    'MATERIAL_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'model', 'material'),
+    'PROJECT_FILE_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'ProjectFile'),
+    
+    # 云服务器Web API地址（生产环境）
+    'WEB_API_HOST': os.environ.get('WEB_API_HOST', 'https://your-domain.com'),
+    'WEB_API_PORT': int(os.environ.get('WEB_API_PORT', '443')),
+    'API_BASE': os.environ.get('API_BASE', 'https://your-domain.com'),
+    
+    # 网站链接
+    'COMPANY_WEBSITE': os.environ.get('COMPANY_WEBSITE', 'https://your-domain.com'),
+    'COPYRIGHT_CENTER_URL': 'https://register.ccopyright.com.cn/login.html',
     
     # 浏览器配置
     'BROWSER_PATH': 'C:/Program Files/Google/Chrome/Application/chrome.exe'

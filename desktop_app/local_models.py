@@ -129,6 +129,7 @@ class LocalDatabase:
                 status TEXT,
                 executor_id INTEGER,
                 remarks TEXT,
+                is_settled BOOLEAN DEFAULT 0,
                 created_time TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_time TEXT DEFAULT CURRENT_TIMESTAMP,
                 recurrent_copy_time TEXT
@@ -504,7 +505,8 @@ class LocalProject:
         if result:
             columns = ['id', 'project_name', 'project_type', 'applicant_type', 
                       'copyright_owner', 'software_applicant_name', 'serial_number', 
-                      'priority', 'status', 'executor_id', 'remarks', 'created_time', 'updated_time']
+                      'priority', 'status', 'executor_id', 'remarks', 'is_settled', 
+                      'created_time', 'updated_time']
             return dict(zip(columns, result[0]))
         return None
     
@@ -522,6 +524,13 @@ class LocalProject:
         self.db.execute_update(
             "UPDATE local_projects SET status = ?, updated_time = ? WHERE id = ?",
             (status, datetime.now().isoformat(), project_id)
+        )
+    
+    def update_project_settled(self, project_id, is_settled):
+        """更新项目收费状态"""
+        self.db.execute_update(
+            "UPDATE local_projects SET is_settled = ?, updated_time = ? WHERE id = ?",
+            (is_settled, datetime.now().isoformat(), project_id)
         )
     
     def delete_project(self, project_id):

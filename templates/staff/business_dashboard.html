@@ -29,6 +29,11 @@
                     <a class="nav-link" href="{{ url_for('reports.index') }}">
                         <i class="fas fa-chart-bar"></i> 数据报表
                     </a>
+                    {% if current_user.position is defined and current_user.position and current_user.position.position == '系统管理员' %}
+                    <a class="nav-link" href="{{ url_for('staff.user_management') }}">
+                        <i class="fas fa-users-cog"></i> 用户管理
+                    </a>
+                    {% endif %}
                 </nav>
             </div>
         </div>
@@ -259,7 +264,7 @@
                                                 常用功能快速入口
                                             </p>
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <button class="btn btn-outline-secondary" onclick="window.location.href='{{ url_for('staff.business_dashboard') }}'">
+                                                <button class="btn btn-outline-secondary" onclick="window.location.reload()">
                                                     <i class="fas fa-sync"></i> 刷新
                                                 </button>
                                                 <button class="btn btn-outline-secondary" onclick="window.print()">
@@ -414,6 +419,9 @@
                                                         <i class="fas fa-arrow-right"></i> 立项
                                                     </button>
                                                     {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
@@ -482,6 +490,30 @@ function submitReject(){
         if(d.success){ alert('已驳回并通知用户'); location.reload(); }
         else{ alert('操作失败：' + d.message); }
     }).catch(()=>alert('操作失败，请重试'));
+}
+
+function approveProject(projectId) {
+    if (confirm('确定要立项这个项目吗？立项后项目将进入执行阶段。')) {
+        fetch(`/staff/project/${projectId}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('项目立项成功！');
+                location.reload();
+            } else {
+                alert('立项失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败，请重试');
+        });
+    }
 }
 </script>
 {% endblock %}
