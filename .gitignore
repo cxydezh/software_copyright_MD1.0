@@ -43,4 +43,3 @@ nosetests.xml
 .venv
 venv
 venv/
-# sqlite databases
