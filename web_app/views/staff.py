@@ -642,8 +642,6 @@ def apply_business():
             
         except Exception as e:
             db.session.rollback()
-            # 打印全部调试错误信息
-            print(e)
             flash('代客申请提交失败，请重试', 'danger')
     
     return render_template('staff/apply_business.html')
@@ -672,17 +670,17 @@ def user_management():
         return redirect(url_for('staff.business_dashboard'))
     
     # 获取待审核的员工账号
-    pending_staff = Staff.query.filter_by(is_staff_account=True, approval_status='pending').order_by(Staff.register_date.desc()).all()
+    pending_staff = Staff.query.filter_by(approval_status='pending').order_by(Staff.register_date.desc()).all()
 
-    # 获取所有员工账号
-    all_staff = Staff.query.filter_by(is_staff_account=True).order_by(Staff.register_date.desc()).all()
+    # 获取已审核通过的员工账号
+    approved_staff = Staff.query.filter_by(approval_status='approved').order_by(Staff.register_date.desc()).all()
     
     # 获取所有普通用户
     all_users = User.query.order_by(User.register_time.desc()).all()
     
     return render_template('staff/user_management.html',
                          pending_staff=pending_staff,
-                         all_staff=all_staff,
+                         approved_staff=approved_staff,
                          all_users=all_users)
 
 @staff_bp.route('/approve_staff/<int:staff_id>', methods=['POST'])
@@ -698,7 +696,7 @@ def approve_staff(staff_id):
     
     staff = Staff.query.get_or_404(staff_id)
     
-    if not staff.is_staff_account or staff.approval_status != 'pending':
+    if staff.approval_status != 'pending':
         return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
     
     try:
@@ -713,8 +711,19 @@ def approve_staff(staff_id):
                 staff.position_id = default_permission.id
         
         db.session.commit()
-        
-        # TODO: 发送审核通过邮件通知
+        # 发送审核通过通知邮件
+        try:
+            from web_app.utils.email import send_staff_approval_notification
+        except ImportError:
+            # 若不能在此导入, 假设send_staff_approval_notification已在其他地方导入
+            pass
+
+        try:
+            # 调用邮件发送函数，给员工发送审核通过通知
+            send_staff_approval_notification(staff)
+        except Exception as mail_exc:
+            # 邮件发送失败也不影响业务主流程
+            pass
         
         return jsonify({'success': True, 'message': '员工账号审核通过'})
     except Exception as e:
@@ -734,7 +743,7 @@ def reject_staff(staff_id):
     
     staff = Staff.query.get_or_404(staff_id)
     
-    if not staff.is_staff_account or staff.approval_status != 'pending':
+    if staff.approval_status != 'pending':
         return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
     
     data = request.get_json() or {}
@@ -750,10 +759,67 @@ def reject_staff(staff_id):
         staff.approval_remarks = rejection_reason
         
         db.session.commit()
-        
-        # TODO: 发送驳回邮件通知
+        try:
+            from web_app.utils.email import send_staff_rejection_notification
+        except ImportError:
+            # 若不能在此导入, 假设send_staff_rejection_notification已在其他地方导入
+            pass
+
+        try:
+            # 调用邮件发送函数，给员工发送账号驳回通知
+            send_staff_rejection_notification(staff, rejection_reason)
+        except Exception as mail_exc:
+            # 邮件发送失败也不影响业务主流程
+            pass
         
         return jsonify({'success': True, 'message': '员工账号已驳回'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
+
+@staff_bp.route('/reapply_staff/<int:staff_id>', methods=['POST'])
+@login_required
+def reapply_staff(staff_id):
+    """员工重新申请"""
+    staff = Staff.query.get_or_404(staff_id)
+    
+    if staff.approval_status != 'rejected':
+        return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
+    
+    data = request.get_json() or {}
+    new_reason = data.get('application_reason', '').strip()
+    
+    if not new_reason:
+        return jsonify({'success': False, 'message': '请填写申请理由'})
+    
+    try:
+        staff.approval_status = 'pending'
+        staff.application_reason = new_reason
+        staff.approval_date = None
+        staff.approver_id = None
+        staff.approval_remarks = None
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '重新申请成功，等待审核'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
+
+@staff_bp.route('/cancel_staff/<int:staff_id>', methods=['POST'])
+@login_required
+def cancel_staff(staff_id):
+    """员工取消申请"""
+    staff = Staff.query.get_or_404(staff_id)
+    
+    if staff.approval_status not in ['pending', 'rejected']:
+        return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
+    
+    try:
+        db.session.delete(staff)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '申请已取消'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': '操作失败，请重试'})
@@ -771,7 +837,7 @@ def assign_permission(staff_id):
     
     staff = Staff.query.get_or_404(staff_id)
     
-    if not staff.is_staff_account or staff.approval_status != 'approved':
+    if staff.approval_status != 'approved':
         return jsonify({'success': False, 'message': '该账号状态不允许此操作'})
     
     data = request.get_json() or {}

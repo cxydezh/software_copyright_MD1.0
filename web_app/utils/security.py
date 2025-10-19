@@ -217,7 +217,7 @@ def log_security_event(event_type, description, user_id=None, ip_address=None):
         
     except Exception as e:
         # 日志记录失败不应该影响正常业务
-        print(f"Security logging failed: {e}")
+        pass
 
 class InputValidator:
     """输入验证器"""

@@ -34,13 +34,16 @@ def login():
         
         if user and user.check_password(password):
             # 检查员工账号审核状态
-            if user_type == 'staff' and hasattr(user, 'is_staff_account') and user.is_staff_account:
+            if user_type == 'staff':
                 if user.approval_status == 'pending':
                     flash('您的员工账号申请正在审核中，请耐心等待系统管理员审核。', 'warning')
                     return render_template('auth/login.html')
                 elif user.approval_status == 'rejected':
-                    flash('您的员工账号申请已被驳回，请联系系统管理员了解详情。', 'danger')
-                    return render_template('auth/login.html')
+                    # 登录被驳回的员工，重定向到处理页面
+                    login_user(user, remember=True)
+                    user.user_type = user_type
+                    session['user_type'] = user_type
+                    return redirect(url_for('auth.handle_rejected_staff'))
             
             login_user(user, remember=True)
             user.user_type = user_type
@@ -100,7 +103,6 @@ def register():
                     name=name,
                     email=email,
                     phone=phone,
-                    is_staff_account=True,
                     approval_status='pending',
                     application_reason=application_reason
                 )
@@ -402,3 +404,73 @@ def resend_verification_code():
             
     except Exception as e:
         return jsonify({'success': False, 'message': '系统错误，请重试'})
+
+@auth_bp.route('/handle_rejected_staff', methods=['GET'])
+@login_required
+def handle_rejected_staff():
+    """处理被驳回的员工账号"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return redirect(url_for('auth.login'))
+    
+    if current_user.approval_status != 'rejected':
+        return redirect(url_for('staff.business_dashboard'))
+    
+    return render_template('auth/handle_rejected_staff.html', staff=current_user)
+
+@auth_bp.route('/reapply_staff', methods=['POST'])
+@login_required
+def reapply_staff():
+    """重新申请员工账号"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    if current_user.approval_status != 'rejected':
+        return jsonify({'success': False, 'message': '账号状态不允许此操作'})
+    
+    data = request.get_json() or {}
+    new_reason = data.get('application_reason', '').strip()
+    
+    if not new_reason:
+        return jsonify({'success': False, 'message': '请填写申请理由'})
+    
+    try:
+        current_user.approval_status = 'pending'
+        current_user.application_reason = new_reason
+        current_user.approval_date = None
+        current_user.approver_id = None
+        current_user.approval_remarks = None
+        
+        db.session.commit()
+        
+        flash('重新申请成功，等待系统管理员审核', 'success')
+        return jsonify({'success': True, 'message': '重新申请成功，等待审核'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '操作失败，请重试'})
+
+@auth_bp.route('/cancel_staff', methods=['POST'])
+@login_required
+def cancel_staff():
+    """取消员工账号申请"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    if current_user.approval_status not in ['pending', 'rejected']:
+        return jsonify({'success': False, 'message': '账号状态不允许此操作'})
+    
+    try:
+        staff_id = current_user.id
+        staff_to_delete = current_user
+        
+        # 先删除数据库记录
+        db.session.delete(staff_to_delete)
+        db.session.commit()
+        
+        # 然后登出用户
+        logout_user()
+        
+        flash('申请已取消，您的员工账号信息已删除', 'info')
+        return jsonify({'success': True, 'message': '申请已取消', 'redirect': url_for('auth.login')})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'操作失败: {str(e)}'})

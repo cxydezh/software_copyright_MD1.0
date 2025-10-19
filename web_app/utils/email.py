@@ -38,8 +38,8 @@ def send_email_verification(user, token):
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"发送邮箱验证邮件失败: {e}")
-        return False
+        # 邮件发送失败，记录错误但不影响主流程
+        pass
 
 def send_password_reset(user, token):
     """发送密码重置邮件"""
@@ -62,8 +62,8 @@ def send_password_reset(user, token):
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"发送密码重置邮件失败: {e}")
-        return False
+        # 邮件发送失败，记录错误但不影响主流程
+        pass
 
 def send_verification_code(user, code):
     """发送验证码邮件"""
@@ -83,8 +83,8 @@ def send_verification_code(user, code):
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"发送验证码邮件失败: {e}")
-        return False
+        # 邮件发送失败，记录错误但不影响主流程
+        pass
 
 def send_welcome_email(user):
     """发送欢迎邮件"""
@@ -104,5 +104,45 @@ def send_welcome_email(user):
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"发送欢迎邮件失败: {e}")
-        return False
+        # 邮件发送失败，记录错误但不影响主流程
+        pass
+
+def send_staff_approval_notification(staff):
+    """发送员工账号审核通过通知"""
+    try:
+        msg = Message(
+            subject='员工账号审核通过 - 软件著作权管理系统',
+            recipients=[staff.email],
+            sender=current_app.config['MAIL_DEFAULT_SENDER']
+        )
+        
+        msg.html = render_template('emails/staff_approval_notification.html',
+                                 staff=staff,
+                                 app_name=current_app.config['APP_NAME'])
+
+        mail = current_app.extensions['mail']
+        mail.send(msg)
+        return True
+    except Exception as e:
+        # 邮件发送失败，记录错误但不影响主流程
+        pass
+def send_staff_rejection_notification(staff, rejection_reason):
+    """发送员工账号驳回通知"""
+    try:
+        msg = Message(
+            subject='员工账号驳回 - 软件著作权管理系统',
+            recipients=[staff.email],
+            sender=current_app.config['MAIL_DEFAULT_SENDER']
+        )
+        
+        msg.html = render_template('emails/staff_rejection_notification.html',
+                                 staff=staff,
+                                 rejection_reason=rejection_reason, # 添加驳回理由 
+                                 app_name=current_app.config['APP_NAME'])
+        
+        mail = current_app.extensions['mail']
+        mail.send(msg)
+        return True
+    except Exception as e:
+        # 邮件发送失败，记录错误但不影响主流程
+        pass

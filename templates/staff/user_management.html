@@ -46,14 +46,14 @@
                 </div>
             </div>
             
-            <!-- 待审核员工账号 -->
+            <!-- 未审核员工列表 -->
             {% if pending_staff %}
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                <i class="fas fa-clock text-warning"></i> 待审核员工账号
+                                <i class="fas fa-clock text-warning"></i> 未审核员工列表
                                 <span class="badge bg-warning ms-2">{{ pending_staff|length }}</span>
                             </h5>
                         </div>
@@ -112,8 +112,8 @@
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                <i class="fas fa-user-tie"></i> 所有员工账号
-                                <span class="badge bg-primary ms-2">{{ all_staff|length }}</span>
+                                <i class="fas fa-user-tie"></i> 正式员工列表
+                                <span class="badge bg-primary ms-2">{{ approved_staff|length }}</span>
                             </h5>
                         </div>
                         <div class="card-body">
@@ -131,7 +131,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for staff in all_staff %}
+                                        {% for staff in approved_staff %}
                                         <tr>
                                             <td>{{ staff.name }}</td>
                                             <td>{{ staff.email }}</td>
@@ -157,8 +157,19 @@
                                                 {% if staff.approval_status == 'approved' %}
                                                     <button type="button" class="btn btn-primary btn-sm" 
                                                             onclick="assignPermission({{ staff.id }})">
-                                                        <i class="fas fa-key"></i> 分配权限
+                                                        <i class="fas fa-user-cog"></i> 分配权限
                                                     </button>
+                                                {% elif staff.approval_status == 'rejected' %}
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-warning btn-sm" 
+                                                                onclick="reapplyStaff({{ staff.id }})">
+                                                            <i class="fas fa-redo"></i> 重新申请
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-sm" 
+                                                                onclick="cancelStaff({{ staff.id }})">
+                                                            <i class="fas fa-trash"></i> 取消申请
+                                                        </button>
+                                                    </div>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -296,6 +307,51 @@
         </div>
     </div>
 </div>
+
+<!-- 重新申请模态框 -->
+<div class="modal fade" id="reapplyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">重新申请员工账号</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="newApplicationReason" class="form-label">新的申请理由 <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="newApplicationReason" rows="3" 
+                              placeholder="请重新填写申请理由"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-warning" id="confirmReapply">确定重新申请</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 取消申请模态框 -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">取消申请</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>警告：</strong>取消申请后，您的员工账号信息将被永久删除，无法恢复。确定要继续吗？
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmCancel">确定取消申请</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -320,6 +376,20 @@ function rejectStaff(staffId) {
 function assignPermission(staffId) {
     currentStaffId = staffId;
     const modal = new bootstrap.Modal(document.getElementById('permissionModal'));
+    modal.show();
+}
+
+// 重新申请
+function reapplyStaff(staffId) {
+    currentStaffId = staffId;
+    const modal = new bootstrap.Modal(document.getElementById('reapplyModal'));
+    modal.show();
+}
+
+// 取消申请
+function cancelStaff(staffId) {
+    currentStaffId = staffId;
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
     modal.show();
 }
 
@@ -420,6 +490,69 @@ document.getElementById('confirmAssign').addEventListener('click', function() {
     });
     
     bootstrap.Modal.getInstance(document.getElementById('permissionModal')).hide();
+});
+
+// 确认重新申请
+document.getElementById('confirmReapply').addEventListener('click', function() {
+    if (!currentStaffId) return;
+    
+    const newReason = document.getElementById('newApplicationReason').value.trim();
+    if (!newReason) {
+        alert('请填写新的申请理由');
+        return;
+    }
+    
+    fetch(`/staff/reapply_staff/${currentStaffId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            application_reason: newReason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('重新申请成功，等待审核');
+            location.reload();
+        } else {
+            alert('操作失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('reapplyModal')).hide();
+});
+
+// 确认取消申请
+document.getElementById('confirmCancel').addEventListener('click', function() {
+    if (!currentStaffId) return;
+    
+    fetch(`/staff/cancel_staff/${currentStaffId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('申请已取消');
+            location.reload();
+        } else {
+            alert('操作失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
 });
 </script>
 {% endblock %}

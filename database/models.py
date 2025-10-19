@@ -23,11 +23,10 @@ class Staff(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False, comment='密码哈希')
     
     # 员工账号审核相关字段
-    is_staff_account = db.Column(db.Boolean, default=False, comment='是否为员工账号')
     approval_status = db.Column(db.Enum('pending', 'approved', 'rejected'), 
                                default='pending', comment='审核状态')
     approval_date = db.Column(db.DateTime, comment='审核日期')
-    approver_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='审核者ID')
+    approver_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='审核者ID')
     approval_remarks = db.Column(db.Text, comment='审核备注')
     application_reason = db.Column(db.Text, comment='申请理由')
     
@@ -179,9 +178,9 @@ class Project(db.Model):
                       default='待确认', comment='项目状态')
     
     # 外键
-    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, comment='申请者ID')
-    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='确认者ID')
-    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='执行者ID')
+    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='确认者ID')
+    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='执行者ID')
     
     remarks = db.Column(db.Text, comment='项目备注')
     
@@ -201,9 +200,9 @@ class Message(db.Model):
     is_read = db.Column(db.Boolean, default=False, comment='是否已读')
     
     # 外键
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), comment='用户ID')
-    staff_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='员工ID')
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), comment='项目ID')
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), comment='用户ID')
+    staff_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='CASCADE'), comment='员工ID')
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id', ondelete='CASCADE'), comment='项目ID')
     
     # 关系
     staff = db.relationship('Staff', backref='messages')
@@ -269,9 +268,9 @@ class PaperProject(db.Model):
     is_settled = db.Column(db.Boolean, default=False, comment='是否已结清（可与其他状态共存）')
     
     # 外键关联
-    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, comment='申请者ID')
-    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='确认者ID')
-    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='执行者ID')
+    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='确认者ID')
+    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='执行者ID')
     
     remarks = db.Column(db.Text, comment='项目备注')
     
@@ -326,9 +325,9 @@ class PatentProject(db.Model):
     is_settled = db.Column(db.Boolean, default=False, comment='是否已结清（可与其他状态共存）')
     
     # 外键关联
-    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, comment='申请者ID')
-    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='确认者ID')
-    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id'), comment='执行者ID')
+    applicant_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment='申请者ID')
+    confirmer_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='确认者ID')
+    executor_id = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='执行者ID')
     
     remarks = db.Column(db.Text, comment='项目备注')
     
@@ -499,7 +498,7 @@ class ProjectFile(db.Model):
     file_type = db.Column(db.String(50), nullable=False, comment='文件类型')
     file_size = db.Column(db.BigInteger, comment='文件大小')
     upload_time = db.Column(db.DateTime, default=datetime.utcnow, comment='上传时间')
-    uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, comment='上传者ID')
+    uploader_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment='上传者ID')
     file_category = db.Column(db.Enum('申请材料', '技术文档', '证书文件', '其他文件'), 
                             nullable=False, comment='文件分类')
     
@@ -661,7 +660,6 @@ def init_db(app):
                 email='admin@yiqichuang.com',
                 position_id=3,  # 系统管理员
                 phone='13800138000',
-                is_staff_account=True,
                 approval_status='approved',
                 approval_date=datetime.utcnow()
             )

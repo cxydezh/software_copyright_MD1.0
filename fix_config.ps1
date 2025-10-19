@@ -129,3 +129,4 @@ Write-Host "2. Python环境配置" -ForegroundColor White
 Write-Host "3. 文件权限设置" -ForegroundColor White
 Write-Host "4. 防火墙规则" -ForegroundColor White
 
+
