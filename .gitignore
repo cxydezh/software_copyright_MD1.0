@@ -40,5 +40,7 @@ nosetests.xml
 .db
 
 # Virtual environment
+.venv
 venv
+venv/
 # sqlite databases
