@@ -489,3 +489,75 @@ def desktop_archive_project():
     except Exception as e:
         return jsonify({'success': False, 'message': f'归档项目失败: {str(e)}'})
 
+@api_desktop_bp.route('/archived_projects', methods=['POST'])
+def desktop_get_archived_projects():
+    """桌面客户端获取已归档项目API"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': '请求数据格式错误'})
+        
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        user_type = data.get('user_type', 'staff').strip()
+        project_type = data.get('project_type', 'software').strip()
+        
+        # 验证用户身份
+        user = None
+        if user_type == 'staff':
+            user = Staff.query.filter_by(email=email).first()
+        else:
+            user = User.query.filter_by(email=email).first()
+        
+        if not user or not user.check_password(password):
+            return jsonify({'success': False, 'message': '身份验证失败'})
+        
+        # 检查权限（只有员工可以获取归档项目）
+        if user_type != 'staff':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 获取归档项目
+        from web_app.services.archive_service import ArchiveService
+        archived_data = ArchiveService.get_archived_projects(project_type)
+        
+        if archived_data is None:
+            return jsonify({'success': False, 'message': '获取归档项目失败'})
+        
+        # 格式化返回数据
+        results = {
+            'software': [{
+                'id': p.id,
+                'project_name': p.project_name,
+                'project_type': p.project_type,
+                'copyright_owner': p.copyright_owner,
+                'serial_number': p.serial_number,
+                'archive_time': p.archive_time.strftime('%Y-%m-%d %H:%M:%S') if p.archive_time else None,
+                'price': float(p.price) if p.price else 0
+            } for p in archived_data['software']],
+            'paper': [{
+                'id': p.id,
+                'project_name': p.project_name,
+                'paper_title': p.paper_title,
+                'target_journal': p.target_journal,
+                'archive_time': p.archive_time.strftime('%Y-%m-%d %H:%M:%S') if p.archive_time else None,
+                'price': float(p.price) if p.price else 0
+            } for p in archived_data['paper']],
+            'patent': [{
+                'id': p.id,
+                'project_name': p.project_name,
+                'invention_title': p.invention_title,
+                'patent_number': p.patent_number,
+                'archive_time': p.archive_time.strftime('%Y-%m-%d %H:%M:%S') if p.archive_time else None,
+                'price': float(p.price) if p.price else 0
+            } for p in archived_data['patent']]
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': results,
+            'message': '获取归档项目成功'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取归档项目失败: {str(e)}'})
+

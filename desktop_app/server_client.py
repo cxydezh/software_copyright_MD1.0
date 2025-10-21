@@ -386,6 +386,35 @@ class ServerClient:
         """
         return self.update_project_fields(project_id, {'serial_number': serial_number})
     
+    def get_archived_projects(self) -> Tuple[bool, str, List[Dict]]:
+        """
+        获取已归档项目列表
+        
+        Returns:
+            (success, message, projects_list)
+        """
+        if not self.current_user:
+            return False, '请先登录', []
+        
+        data = {
+            'email': self.current_user.get('email'),
+            'password': self.user_password,
+            'user_type': self.current_user.get('user_type'),
+            'project_type': 'software'
+        }
+        
+        success, response = self._make_request('POST', '/desktop/archived_projects', data)
+        
+        if success and response.get('success'):
+            archived_data = response.get('data', {})
+            software_projects = archived_data.get('software', [])
+            self.logger.info("Get archived projects success, count: %d", len(software_projects))
+            return True, '获取已归档项目成功', software_projects
+        else:
+            msg = response.get('message', '获取已归档项目失败') if isinstance(response, dict) else '获取已归档项目失败'
+            self.logger.warning("Get archived projects failed: %s", msg)
+            return False, msg, []
+    
     def get_server_info(self) -> Dict:
         """
         获取服务器信息

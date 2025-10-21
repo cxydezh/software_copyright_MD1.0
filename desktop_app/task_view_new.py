@@ -12,6 +12,7 @@ import os
 import sys
 import shutil
 import traceback
+import psutil
 from datetime import datetime
 
 # 添加项目根目录到Python路径
@@ -1227,6 +1228,119 @@ class TaskViewModule:
             print(f"[DEBUG] 消息框显示失败，窗口可能已销毁: {title}")
             return None
     
+    def _is_file_in_use(self, file_path):
+        """检查文件是否正在被使用"""
+        try:
+            if not os.path.exists(file_path):
+                return False
+            
+            # 检查文件是否被其他进程打开
+            for proc in psutil.process_iter(['pid', 'name', 'open_files']):
+                try:
+                    if proc.info['open_files']:
+                        for open_file in proc.info['open_files']:
+                            if open_file.path == file_path:
+                                return True
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+            return False
+        except Exception as e:
+            print(f"[DEBUG] 检查文件使用状态失败: {e}")
+            return False
+    
+    def _move_project_folder_to_archive(self, project_id, project_name):
+        """将项目文件夹移动到归档目录"""
+        try:
+            # 获取项目文件夹路径
+            base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG.get('PROJECT_FILE_DIR', 'D:/SoftwareCopyrightMS/ProjectFile')
+            source_folder = os.path.join(base_path, f"{project_id}_{project_name}")
+            
+            # 检查源文件夹是否存在
+            if not os.path.exists(source_folder):
+                print(f"[DEBUG] 项目文件夹不存在: {source_folder}")
+                return True, "项目文件夹不存在，无需移动"
+            
+            # 检查文件夹中的文件是否被占用
+            for root, dirs, files in os.walk(source_folder):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    if self._is_file_in_use(file_path):
+                        return False, f"文件正在使用中，无法移动: {file}"
+            
+            # 创建归档目录
+            archive_base = os.path.join(os.path.dirname(base_path), "Archives")
+            archive_folder = os.path.join(archive_base, f"{project_id}_{project_name}")
+            
+            # 确保归档目录存在
+            os.makedirs(archive_base, exist_ok=True)
+            
+            # 如果目标文件夹已存在，添加时间戳
+            if os.path.exists(archive_folder):
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                archive_folder = os.path.join(archive_base, f"{project_id}_{project_name}_{timestamp}")
+            
+            # 移动文件夹
+            shutil.move(source_folder, archive_folder)
+            print(f"[DEBUG] 项目文件夹已移动到归档目录: {archive_folder}")
+            return True, f"项目文件夹已移动到归档目录"
+            
+        except Exception as e:
+            print(f"[DEBUG] 移动项目文件夹失败: {e}")
+            return False, f"移动项目文件夹失败: {str(e)}"
+    
+    def _clean_local_archived_folders(self):
+        """清理本地项目文件夹中的已归档项目"""
+        try:
+            if not self.server_client or self.current_user.get('user_type') != 'staff':
+                return
+            
+            # 获取服务器中的已归档项目
+            ok, msg, archived_projects = self.server_client.get_archived_projects()
+            if not ok:
+                print(f"[DEBUG] 获取已归档项目失败: {msg}")
+                return
+            
+            # 获取本地项目文件夹路径
+            base_path = self.default_path.get_path('project_path') or LOCAL_CONFIG.get('PROJECT_FILE_DIR', 'D:/SoftwareCopyrightMS/ProjectFile')
+            if not os.path.exists(base_path):
+                return
+            
+            # 获取已归档项目的ID列表
+            archived_ids = {p.get('id') for p in archived_projects}
+            
+            # 遍历本地项目文件夹
+            moved_count = 0
+            for item in os.listdir(base_path):
+                item_path = os.path.join(base_path, item)
+                if not os.path.isdir(item_path):
+                    continue
+                
+                # 解析文件夹名称获取项目ID
+                try:
+                    if '_' in item:
+                        project_id = int(item.split('_')[0])
+                        if project_id in archived_ids:
+                            # 找到对应的项目信息
+                            project_info = next((p for p in archived_projects if p.get('id') == project_id), None)
+                            if project_info:
+                                project_name = project_info.get('project_name', '')
+                                success, message = self._move_project_folder_to_archive(project_id, project_name)
+                                if success:
+                                    moved_count += 1
+                                    print(f"[DEBUG] 自动清理归档项目文件夹: {item}")
+                                else:
+                                    print(f"[DEBUG] 清理失败: {message}")
+                except (ValueError, IndexError):
+                    continue
+            
+            if moved_count > 0:
+                print(f"[DEBUG] 自动清理完成，移动了 {moved_count} 个项目文件夹到归档目录")
+                
+        except Exception as e:
+            print(f"[DEBUG] 自动清理归档文件夹失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
 
     def open_copyright_center(self):
         """打开国家版权保护中心网站"""
@@ -2004,6 +2118,9 @@ class TaskViewModule:
                         self.trees[status_title].insert('', 'end', values=(
                             p.get('id'), p.get('project_name'), p.get('project_type'), p.get('priority')
                         ))
+                
+                # 自动清理本地项目文件夹中的已归档项目
+                self._clean_local_archived_folders()
             else:
                 # 回退：从本地库按状态字段粗略分组
                 projects = self.local_project.get_all_projects()
@@ -2237,6 +2354,14 @@ class TaskViewModule:
                     print(f"[DEBUG] 服务器归档异常: {e}")
                     self._safe_messagebox("错误", f"归档失败: {str(e)}", "error")
                     return
+            
+            # 移动项目文件夹到归档目录
+            if server_updated:
+                project_name = self.selected_project.get('project_name', '')
+                success, message = self._move_project_folder_to_archive(project_id, project_name)
+                if not success:
+                    print(f"[DEBUG] 文件移动失败: {message}")
+                    self._safe_messagebox("警告", f"服务器归档成功，但文件移动失败: {message}", "warning")
             
             # 更新本地数据库
             try:

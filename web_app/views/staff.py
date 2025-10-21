@@ -381,6 +381,17 @@ def update_project_status(project_id):
     
     try:
         prev_status = project.status
+        
+        # 如果状态是"已归档"，调用归档服务进行完整归档
+        if new_status == '已归档':
+            from web_app.services.archive_service import ArchiveService
+            success, message = ArchiveService.archive_software_project(project_id)
+            if success:
+                return jsonify({'success': True, 'message': '项目已成功归档'})
+            else:
+                return jsonify({'success': False, 'message': f'归档失败: {message}'})
+        
+        # 其他状态更新
         project.status = new_status
         
         # 更新相应的时间字段
@@ -388,8 +399,7 @@ def update_project_status(project_id):
             project.submit_time = datetime.utcnow()
         elif new_status == '证书完成':
             project.certificate_time = datetime.utcnow()
-        elif new_status == '已归档':
-            project.is_archived = True
+            
         db.session.add(ProcessLog(
             project_type='software', project_id=project.id,
             action='update_status', actor_id=current_user.id, actor_role='staff',

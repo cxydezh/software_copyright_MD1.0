@@ -90,12 +90,12 @@ LOCAL_CONFIG = {
     'PROJECT_FILE_DIR': os.path.join(os.path.expanduser('~'), 'SoftwareCopyrightMS', 'ProjectFile'),
     
     # 云服务器Web API地址（生产环境）
-    'WEB_API_HOST': os.environ.get('WEB_API_HOST', 'https://your-domain.com'),
-    'WEB_API_PORT': int(os.environ.get('WEB_API_PORT', '443')),
-    'API_BASE': os.environ.get('API_BASE', 'https://your-domain.com'),
+    'WEB_API_HOST': os.environ.get('WEB_API_HOST', 'http://localhost'),
+    'WEB_API_PORT': int(os.environ.get('WEB_API_PORT', '5000')),
+    'API_BASE': os.environ.get('API_BASE', 'http://localhost:5000'),
     
     # 网站链接
-    'COMPANY_WEBSITE': os.environ.get('COMPANY_WEBSITE', 'https://your-domain.com'),
+    'COMPANY_WEBSITE': os.environ.get('COMPANY_WEBSITE', 'http://localhost:5000'),
     'COPYRIGHT_CENTER_URL': 'https://register.ccopyright.com.cn/login.html',
     
     # 浏览器配置

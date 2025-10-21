@@ -499,7 +499,12 @@ function submitUpdateStatus() {
             alert('状态更新成功');
             const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
             modal.hide();
-            location.reload();
+            // 如果状态是"已归档"，重定向到论文列表页面
+            if (status === '已归档') {
+                window.location.href = '/paper/staff_dashboard';
+            } else {
+                location.reload();
+            }
         } else {
             alert('状态更新失败：' + data.message);
         }
