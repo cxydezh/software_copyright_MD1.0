@@ -189,13 +189,20 @@ def choose_role():
 @login_required
 def switch_role(role):
     """切换用户角色"""
+    print(f"切换角色请求: {role}, 当前用户: {current_user.email}")
+    
     if role in ['user', 'staff']:
         session['user_type'] = role
+        print(f"角色已设置为: {role}")
+        
         if role == 'staff':
+            print("重定向到员工仪表板")
             return redirect(url_for('staff.business_dashboard'))
         else:
+            print("重定向到用户仪表板")
             return redirect(url_for('user.dashboard'))
     
+    print("无效的角色选择")
     flash('无效的角色选择', 'danger')
     return redirect(url_for('auth.choose_role'))
 

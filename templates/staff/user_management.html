@@ -154,13 +154,19 @@
                                             </td>
                                             <td>{{ staff.register_date.strftime('%Y-%m-%d %H:%M') }}</td>
                                             <td>
-                                                {% if staff.approval_status == 'approved' %}
-                                                    <button type="button" class="btn btn-primary btn-sm" 
-                                                            onclick="assignPermission({{ staff.id }})">
-                                                        <i class="fas fa-user-cog"></i> 分配权限
-                                                    </button>
-                                                {% elif staff.approval_status == 'rejected' %}
-                                                    <div class="btn-group" role="group">
+                                                <div class="btn-group" role="group">
+                                                    {% if staff.approval_status == 'approved' %}
+                                                        <button type="button" class="btn btn-primary btn-sm" 
+                                                                onclick="assignPermission({{ staff.id }})">
+                                                            <i class="fas fa-user-cog"></i> 分配权限
+                                                        </button>
+                                                        {% if staff.id != current_user.id %}
+                                                        <button type="button" class="btn btn-danger btn-sm delete-staff-btn" 
+                                                                data-staff-id="{{ staff.id }}" data-staff-name="{{ staff.name }}">
+                                                            <i class="fas fa-trash"></i> 删除
+                                                        </button>
+                                                        {% endif %}
+                                                    {% elif staff.approval_status == 'rejected' %}
                                                         <button type="button" class="btn btn-warning btn-sm" 
                                                                 onclick="reapplyStaff({{ staff.id }})">
                                                             <i class="fas fa-redo"></i> 重新申请
@@ -169,8 +175,8 @@
                                                                 onclick="cancelStaff({{ staff.id }})">
                                                             <i class="fas fa-trash"></i> 取消申请
                                                         </button>
-                                                    </div>
-                                                {% endif %}
+                                                    {% endif %}
+                                                </div>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -203,6 +209,7 @@
                                             <th>用户类别</th>
                                             <th>注册时间</th>
                                             <th>邮箱验证</th>
+                                            <th>操作</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -221,6 +228,12 @@
                                                 {% else %}
                                                     <span class="badge bg-warning">未验证</span>
                                                 {% endif %}
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-danger btn-sm delete-user-btn" 
+                                                        data-user-id="{{ user.id }}" data-user-name="{{ user.name }}">
+                                                    <i class="fas fa-trash"></i> 删除
+                                                </button>
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -352,11 +365,83 @@
         </div>
     </div>
 </div>
+
+<!-- 删除用户确认模态框 -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> 删除用户确认
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>警告：</strong>此操作不可撤销！
+                </div>
+                <p>您确定要删除用户 <strong id="deleteUserName"></strong> 吗？</p>
+                <p class="text-muted">删除后：</p>
+                <ul class="text-muted">
+                    <li>用户账号将被永久删除</li>
+                    <li>如果用户有相关项目，删除操作将失败</li>
+                    <li>此操作无法撤销</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteUser()">
+                    <i class="fas fa-trash"></i> 确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 删除员工确认模态框 -->
+<div class="modal fade" id="deleteStaffModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> 删除员工确认
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>警告：</strong>此操作不可撤销！
+                </div>
+                <p>您确定要删除员工 <strong id="deleteStaffName"></strong> 吗？</p>
+                <p class="text-muted">删除后：</p>
+                <ul class="text-muted">
+                    <li>员工账号将被永久删除</li>
+                    <li>如果员工有相关项目，删除操作将失败</li>
+                    <li>此操作无法撤销</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteStaff()">
+                    <i class="fas fa-trash"></i> 确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 let currentStaffId = null;
+let currentUserId = null;
+let currentDeleteStaffId = null;
 
 // 审核通过
 function approveStaff(staffId) {
@@ -391,6 +476,93 @@ function cancelStaff(staffId) {
     currentStaffId = staffId;
     const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
     modal.show();
+}
+
+// 删除用户
+function deleteUser(userId, userName) {
+    currentUserId = userId;
+    document.getElementById('deleteUserName').textContent = userName;
+    const modal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+    modal.show();
+}
+
+// 删除员工
+function deleteStaff(staffId, staffName) {
+    currentDeleteStaffId = staffId;
+    document.getElementById('deleteStaffName').textContent = staffName;
+    const modal = new bootstrap.Modal(document.getElementById('deleteStaffModal'));
+    modal.show();
+}
+
+// 添加事件监听器
+document.addEventListener('DOMContentLoaded', function() {
+    // 删除用户按钮事件
+    document.querySelectorAll('.delete-user-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const userName = this.dataset.userName;
+            deleteUser(userId, userName);
+        });
+    });
+    
+    // 删除员工按钮事件
+    document.querySelectorAll('.delete-staff-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const staffId = this.dataset.staffId;
+            const staffName = this.dataset.staffName;
+            deleteStaff(staffId, staffName);
+        });
+    });
+});
+
+// 确认删除用户
+function confirmDeleteUser() {
+    if (!currentUserId) return;
+    
+    fetch(`/staff/delete_user/${currentUserId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('用户删除成功');
+            location.reload();
+        } else {
+            alert('删除失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('删除失败，请重试');
+    });
+}
+
+// 确认删除员工
+function confirmDeleteStaff() {
+    if (!currentDeleteStaffId) return;
+    
+    fetch(`/staff/delete_staff/${currentDeleteStaffId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('员工删除成功');
+            location.reload();
+        } else {
+            alert('删除失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('删除失败，请重试');
+    });
 }
 
 // 确认审核通过

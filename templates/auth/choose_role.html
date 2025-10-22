@@ -55,10 +55,10 @@
                                         {% endif %}
                                     </div>
                                     <div class="card-footer bg-transparent text-center">
-                                        <button class="btn btn-outline-primary btn-sm select-role-btn" 
-                                                data-role="{{ role_code }}">
+                                        <a href="{{ url_for('auth.switch_role', role=role_code) }}" 
+                                           class="btn btn-primary btn-sm">
                                             <i class="fas fa-arrow-right"></i> 选择此身份
-                                        </button>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -83,26 +83,24 @@
                             <i class="fas fa-sign-out-alt"></i> 退出登录
                         </a>
                     </div>
+
+                    <!-- 备用链接（如果JavaScript不工作） -->
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            如果无法正常切换，请尝试：
+                            {% for role_code, role_name in roles %}
+                            <a href="{{ url_for('auth.switch_role', role=role_code) }}" class="text-decoration-none">
+                                {{ role_name }}
+                            </a>{% if not loop.last %} | {% endif %}
+                            {% endfor %}
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 加载动画 -->
-<div id="loadingModal" class="modal fade" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center p-4">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">加载中...</span>
-                </div>
-                <h5>正在切换身份...</h5>
-                <p class="text-muted mb-0">请稍候，系统正在为您准备相应的工作界面</p>
-            </div>
-        </div>
-    </div>
-</div>
 
 <style>
 .role-card .card {
@@ -175,62 +173,21 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.role-card').forEach(function(card) {
         card.addEventListener('click', function() {
             const role = this.dataset.role;
-            selectRole(role);
+            const link = this.querySelector('a');
+            if (link) {
+                link.click();
+            }
         });
     });
-
-    // 选择身份按钮点击事件
-    document.querySelectorAll('.select-role-btn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const role = this.dataset.role;
-            selectRole(role);
-        });
-    });
-
-    function selectRole(role) {
-        // 显示加载动画
-        const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-        loadingModal.show();
-
-        // 发送请求切换角色
-        fetch(`/auth/switch_role/${role}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                // 成功切换，页面会自动重定向
-                return response;
-            } else {
-                throw new Error('角色切换失败');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            loadingModal.hide();
-            
-            // 显示错误提示
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>切换失败：</strong>${error.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.querySelector('.card-body').insertBefore(alertDiv, document.querySelector('.alert-info'));
-        });
-    }
 
     // 键盘快捷键支持
     document.addEventListener('keydown', function(e) {
         if (e.key === '1' && document.querySelector('[data-role="user"]')) {
-            selectRole('user');
+            const link = document.querySelector('[data-role="user"] a');
+            if (link) link.click();
         } else if (e.key === '2' && document.querySelector('[data-role="staff"]')) {
-            selectRole('staff');
+            const link = document.querySelector('[data-role="staff"] a');
+            if (link) link.click();
         }
     });
 

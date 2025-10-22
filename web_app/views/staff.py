@@ -866,3 +866,73 @@ def assign_permission(staff_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': '操作失败，请重试'})
+
+@staff_bp.route('/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    """删除普通用户"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    # 检查是否为系统管理员
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '系统管理员'):
+        return jsonify({'success': False, 'message': '您不是系统管理员，无权执行此操作'})
+    
+    user = User.query.get_or_404(user_id)
+    
+    try:
+        # 检查用户是否有相关项目
+        project_count = Project.query.filter_by(applicant_id=user_id).count()
+        
+        if project_count > 0:
+            return jsonify({
+                'success': False, 
+                'message': f'该用户有 {project_count} 个相关项目，无法删除。请先处理相关项目。'
+            })
+        
+        # 删除用户
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '用户删除成功'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '删除失败，请重试'})
+
+@staff_bp.route('/delete_staff/<int:staff_id>', methods=['POST'])
+@login_required
+def delete_staff(staff_id):
+    """删除员工账号"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        return jsonify({'success': False, 'message': '权限不足'})
+    
+    # 检查是否为系统管理员
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '系统管理员'):
+        return jsonify({'success': False, 'message': '您不是系统管理员，无权执行此操作'})
+    
+    # 不能删除自己
+    if staff_id == current_user.id:
+        return jsonify({'success': False, 'message': '不能删除自己的账号'})
+    
+    staff = Staff.query.get_or_404(staff_id)
+    
+    try:
+        # 检查员工是否有相关项目
+        project_count = Project.query.filter(
+            db.or_(Project.confirmer_id == staff_id, Project.executor_id == staff_id)
+        ).count()
+        
+        if project_count > 0:
+            return jsonify({
+                'success': False, 
+                'message': f'该员工有 {project_count} 个相关项目，无法删除。请先处理相关项目。'
+            })
+        
+        # 删除员工
+        db.session.delete(staff)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '员工删除成功'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': '删除失败，请重试'})
