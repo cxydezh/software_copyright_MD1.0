@@ -98,7 +98,7 @@ def create_sample_data():
             admin_staff = Staff(
                 name='系统管理员',
                 email='admin@yiqichuang.com',
-                phone='188 3826 9405',
+                phone='195 5553 8037',
                 position_id=1,
                 password_hash='$pbkdf2-sha256$29000$N2YqzZ8GK3bDFu4vP3P3Og$rZ3P1N4.3T1hJ5V8x9Q2O0Y7Z6W1E4R3T2Y1U0I9O8P'  # admin123
             )

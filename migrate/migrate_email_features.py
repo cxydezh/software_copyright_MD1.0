@@ -9,8 +9,10 @@ import sys
 from datetime import datetime
 from sqlalchemy import text
 
-# 添加项目根目录到Python路径
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# 修复：添加项目根目录到Python路径（而不是当前脚本目录）
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from web_app.app import create_app
 from database.models import db, User, Staff

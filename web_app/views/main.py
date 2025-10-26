@@ -66,7 +66,7 @@ def contact():
     contact_info = {
         'company': '郑州医企创医疗科技有限公司',
         'address': '河南省郑州市二七区大学路汝河路交叉口康桥金域上郡五号院',
-        'phone': '188 3826 9405',
+        'phone': '195 5553 8037',
         'email': 'nngde@qq.com',
         'business_hours': '周一至周日 9:00-18:00'
     }

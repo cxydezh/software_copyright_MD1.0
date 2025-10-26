@@ -240,4 +240,4 @@ code_expires = datetime.utcnow() + timedelta(minutes=5)
 
 如有问题，请联系：
 - 邮箱：admin@yiqichuang.com
-- 电话：188 3826 9405
+- 电话：195 5553 8037
