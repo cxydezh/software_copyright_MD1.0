@@ -560,6 +560,19 @@ def available_projects():
     
     return render_template('staff/available_projects.html', available_projects=available_projects)
 
+@staff_bp.route('/my_confirmed_projects')
+@login_required
+def my_confirmed_projects():
+    """查看我确认的所有项目"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # 获取我确认的所有项目（所有状态的）
+    confirmed_projects = Project.query.filter_by(confirmer_id=current_user.id).order_by(Project.confirm_time.desc()).all()
+    
+    return render_template('staff/my_confirmed_projects.html', confirmed_projects=confirmed_projects)
+
 @staff_bp.route('/approved_projects')
 @login_required
 def approved_projects_page():
@@ -567,12 +580,14 @@ def approved_projects_page():
     if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
         flash('权限不足', 'danger')
         return redirect(url_for('main.index'))
-    # 仅项目执行者可见
-    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '项目执行者'):
-        flash('您不是项目执行者', 'warning')
-        return redirect(url_for('staff.business_dashboard'))
-
-    approved_projects = Project.query.filter_by(status='已立项', executor_id=None).order_by(Project.confirm_time.desc()).all()
+    
+    # 如果是项目执行者，查看未分配的项目
+    if hasattr(current_user, 'position') and current_user.position and current_user.position.position == '项目执行者':
+        approved_projects = Project.query.filter_by(status='已立项', executor_id=None).order_by(Project.confirm_time.desc()).all()
+    else:
+        # 如果是业务员，查看自己确认的所有项目（包括已分配和未分配的）
+        approved_projects = Project.query.filter_by(confirmer_id=current_user.id, status='已立项').order_by(Project.confirm_time.desc()).all()
+    
     return render_template('staff/approved_projects.html', approved_projects=approved_projects)
 
 @staff_bp.route('/apply_business', methods=['GET', 'POST'])

@@ -435,7 +435,7 @@
                         </div>
                         {% if confirmed_projects|length > 10 %}
                         <div class="card-footer text-center">
-                            <a href="#" class="btn btn-sm btn-primary">查看全部</a>
+                            <a href="{{ url_for('staff.my_confirmed_projects') }}" class="btn btn-sm btn-primary">查看全部</a>
                         </div>
                         {% endif %}
                     </div>
