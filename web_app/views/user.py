@@ -7,7 +7,7 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database.models import db, Project, Message, ProcessLog
+from database.models import db, Project, PaperProject, PatentProject, Message, ProcessLog
 
 user_bp = Blueprint('user', __name__)
 
@@ -19,22 +19,69 @@ def dashboard():
         flash('权限不足', 'danger')
         return redirect(url_for('main.index'))
     
-    # 获取用户的项目
-    user_projects = Project.query.filter_by(applicant_id=current_user.id).order_by(Project.apply_time.desc()).all()
+    # 获取用户的所有类型项目
+    software_projects = Project.query.filter_by(applicant_id=current_user.id).order_by(Project.apply_time.desc()).all()
+    paper_projects = PaperProject.query.filter_by(applicant_id=current_user.id).order_by(PaperProject.apply_time.desc()).all()
+    patent_projects = PatentProject.query.filter_by(applicant_id=current_user.id).order_by(PatentProject.apply_time.desc()).all()
+    
+    # 合并所有项目
+    all_projects = []
+    
+    # 软件登记项目
+    for p in software_projects:
+        all_projects.append({
+            'type': 'software',
+            'id': p.id,
+            'project_name': p.project_name,
+            'project_type': p.project_type,
+            'status': p.status,
+            'apply_time': p.apply_time,
+            'priority': getattr(p, 'priority', None),
+            'serial_number': getattr(p, 'serial_number', None)
+        })
+    
+    # 论文项目
+    for p in paper_projects:
+        all_projects.append({
+            'type': 'paper',
+            'id': p.id,
+            'project_name': p.project_name,
+            'project_type': p.project_type,
+            'status': p.status,
+            'apply_time': p.apply_time,
+            'priority': None,
+            'serial_number': None
+        })
+    
+    # 专利项目
+    for p in patent_projects:
+        all_projects.append({
+            'type': 'patent',
+            'id': p.id,
+            'project_name': p.project_name,
+            'project_type': p.project_type,
+            'status': p.status,
+            'apply_time': p.apply_time,
+            'priority': None,
+            'serial_number': None
+        })
+    
+    # 按申请时间倒序排序
+    all_projects.sort(key=lambda x: x['apply_time'] if x['apply_time'] else datetime.min, reverse=True)
     
     # 统计信息
     stats = {
-        'total_projects': len(user_projects),
-        'pending_projects': len([p for p in user_projects if p.status in ['待确认', '已确认', '已立项', '执行中']]),
-        'completed_projects': len([p for p in user_projects if p.status in ['已完成', '已上传', '已获取流水号', '证书完成']]),
-        'archived_projects': len([p for p in user_projects if p.status == '已归档'])
+        'total_projects': len(all_projects),
+        'pending_projects': len([p for p in all_projects if p['status'] in ['待确认', '已确认', '已立项', '执行中', '进行中', '准备中']]),
+        'completed_projects': len([p for p in all_projects if p['status'] in ['已完成', '已上传', '已获取流水号', '证书完成', '已录用', '已发表', '已授权']]),
+        'archived_projects': len([p for p in all_projects if p['status'] == '已归档'])
     }
     
     # 获取最近的消息
     recent_messages = Message.query.filter_by(user_id=current_user.id).order_by(Message.create_time.desc()).limit(5).all()
     
     return render_template('user/dashboard.html', 
-                         projects=user_projects, 
+                         projects=all_projects, 
                          stats=stats,
                          recent_messages=recent_messages)
 

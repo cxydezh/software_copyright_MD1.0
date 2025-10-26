@@ -151,6 +151,7 @@
                                 <table class="table table-hover mb-0">
                                     <thead class="table-light">
                                         <tr>
+                                            <th>业务类型</th>
                                             <th>项目名称</th>
                                             <th>项目类型</th>
                                             <th>当前状态</th>
@@ -162,6 +163,15 @@
                                     <tbody>
                                         {% for project in projects %}
                                         <tr>
+                                            <td>
+                                                {% if project.type == 'software' %}
+                                                <span class="badge bg-primary"><i class="fas fa-desktop"></i> 软件登记</span>
+                                                {% elif project.type == 'paper' %}
+                                                <span class="badge bg-info"><i class="fas fa-file-alt"></i> 论文</span>
+                                                {% elif project.type == 'patent' %}
+                                                <span class="badge bg-success"><i class="fas fa-certificate"></i> 专利</span>
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 <strong>{{ project.project_name }}</strong>
                                                 {% if project.serial_number %}
@@ -177,8 +187,13 @@
                                                     {% elif project.status == '已确认' %}bg-primary
                                                     {% elif project.status == '已立项' %}bg-info
                                                     {% elif project.status == '执行中' %}bg-warning
+                                                    {% elif project.status == '进行中' %}bg-warning
+                                                    {% elif project.status == '准备中' %}bg-info
                                                     {% elif project.status == '已完成' %}bg-success
                                                     {% elif project.status == '证书完成' %}bg-success
+                                                    {% elif project.status == '已录用' %}bg-success
+                                                    {% elif project.status == '已发表' %}bg-success
+                                                    {% elif project.status == '已授权' %}bg-success
                                                     {% elif project.status == '已归档' %}bg-secondary
                                                     {% else %}bg-secondary
                                                     {% endif %}">
@@ -191,6 +206,7 @@
                                                 </small>
                                             </td>
                                             <td>
+                                                {% if project.priority %}
                                                 <span class="badge 
                                                     {% if project.priority == '快速' %}bg-danger
                                                     {% elif project.priority == '加急' %}bg-warning
@@ -198,9 +214,13 @@
                                                     {% endif %}">
                                                     {{ project.priority }}
                                                 </span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">-</span>
+                                                {% endif %}
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
+                                                    {% if project.type == 'software' %}
                                                     <a href="{{ url_for('user.project_detail', project_id=project.id) }}" 
                                                        class="btn btn-sm btn-outline-primary">
                                                         <i class="fas fa-eye"></i> 详情
@@ -213,6 +233,17 @@
                                                     <a href="{{ url_for('user.edit_project', project_id=project.id) }}" 
                                                        class="btn btn-sm btn-outline-secondary">
                                                         <i class="fas fa-edit"></i> 编辑
+                                                    </a>
+                                                    {% endif %}
+                                                    {% elif project.type == 'paper' %}
+                                                    <a href="{{ url_for('paper.detail', paper_id=project.id) }}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i> 详情
+                                                    </a>
+                                                    {% elif project.type == 'patent' %}
+                                                    <a href="{{ url_for('patent.detail', patent_id=project.id) }}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i> 详情
                                                     </a>
                                                     {% endif %}
                                                 </div>

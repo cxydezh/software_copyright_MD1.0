@@ -43,3 +43,6 @@ nosetests.xml
 .venv
 venv
 venv/
+
+.sh
+.ps1

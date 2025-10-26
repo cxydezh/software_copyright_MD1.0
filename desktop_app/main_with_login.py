@@ -228,7 +228,7 @@ class SoftwareCopyrightMS(SafeTkinterApp):
         
         # 设置默认焦点
         username_entry.focus()
-        self.username_var.set('admin@yiqichuang.com')
+        self.username_var.set('cxyde@sina.cn')
         self.password_var.set('admin123')
 
     def login(self):
