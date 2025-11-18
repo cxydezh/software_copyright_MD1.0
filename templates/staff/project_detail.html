@@ -216,6 +216,11 @@
                                            class="btn btn-sm btn-outline-primary" title="下载">
                                             <i class="fas fa-download"></i> 下载
                                         </a>
+                                        <button class="btn btn-sm btn-outline-danger ms-2" 
+                                                onclick="deleteFile({{ project.id }}, {{ file.id }})" 
+                                                title="删除">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -736,6 +741,31 @@ function uploadFile(projectId) {
         alert('上传失败，请重试');
         uploadBtn.disabled = false;
         uploadBtn.innerHTML = '<i class="fas fa-upload"></i> 上传';
+    });
+}
+
+// 删除文件功能
+function deleteFile(projectId, fileId) {
+    if (!confirm('确定要删除此文件吗？删除后无法恢复。')) {
+        return;
+    }
+    
+    fetch(`/staff/project/${projectId}/file/${fileId}/delete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('文件删除成功！');
+            location.reload();
+        } else {
+            alert('删除失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('删除失败，请重试');
     });
 }
 </script>

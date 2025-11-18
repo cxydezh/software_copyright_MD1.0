@@ -296,7 +296,7 @@ document.getElementById('applicant_type').addEventListener('change', function() 
 });
 
 // 文件上传功能
-let uploadedFiles = [];
+let uploadedFiles = []; // 存储已上传的临时文件信息 {temp_path, original_name, index}
 
 // 文件大小限制（16MB）
 const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
@@ -327,14 +327,20 @@ document.getElementById('fileInput').addEventListener('change', function() {
                 return;
             }
             
+            // 检查是否已上传
+            const uploadedFile = uploadedFiles.find(uf => uf.index === index);
+            const fileId = uploadedFile ? uploadedFile.temp_path : null;
+            
             const listItem = document.createElement('li');
             listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+            listItem.id = `file-item-${index}`;
             listItem.innerHTML = `
                 <span>
                     <i class="fas fa-file"></i> ${file.name} 
                     <small class="text-muted">(${(file.size / 1024).toFixed(2)} KB)</small>
+                    ${uploadedFile ? '<span class="badge bg-success ms-2">已上传</span>' : ''}
                 </span>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeFile(${index})">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeFile(${index}, '${fileId || ''}')">
                     <i class="fas fa-times"></i>
                 </button>
             `;
@@ -349,14 +355,43 @@ document.getElementById('fileInput').addEventListener('change', function() {
     }
 });
 
-function removeFile(index) {
+async function removeFile(index, tempPath) {
     const fileInput = document.getElementById('fileInput');
+    const fileListDiv = document.getElementById('fileList');
+    
+    // 如果文件已上传，先删除服务器上的临时文件
+    if (tempPath) {
+        try {
+            const response = await fetch('/staff/apply_business/temp_file/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({temp_path: tempPath})
+            });
+            const data = await response.json();
+            if (!data.success) {
+                console.warn('删除临时文件失败:', data.message);
+            }
+        } catch (error) {
+            console.error('删除临时文件错误:', error);
+        }
+        
+        // 从已上传文件列表中移除
+        uploadedFiles = uploadedFiles.filter(uf => uf.temp_path !== tempPath);
+    }
+    
+    // 从文件输入中移除
     const dt = new DataTransfer();
     const files = Array.from(fileInput.files);
-    
     files.splice(index, 1);
     files.forEach(file => dt.items.add(file));
     fileInput.files = dt.files;
+    
+    // 更新已上传文件的索引
+    uploadedFiles.forEach(uf => {
+        if (uf.index > index) {
+            uf.index--;
+        }
+    });
     
     // 触发change事件更新列表
     fileInput.dispatchEvent(new Event('change'));
@@ -402,7 +437,13 @@ document.getElementById('businessApplyForm').addEventListener('submit', async fu
                 
                 const data = await response.json();
                 if (data.success) {
-                    uploadedFiles.push(data.file.temp_path);
+                    // 记录已上传的文件信息
+                    uploadedFiles.push({
+                        temp_path: data.file.temp_path,
+                        original_name: data.file.original_name,
+                        index: i
+                    });
+                    
                     // 添加隐藏字段
                     const hiddenInput = document.createElement('input');
                     hiddenInput.type = 'hidden';
@@ -421,6 +462,19 @@ document.getElementById('businessApplyForm').addEventListener('submit', async fu
                     categoryInput.name = `file_category_${data.file.temp_path}`;
                     categoryInput.value = fileCategory;
                     e.target.appendChild(categoryInput);
+                    
+                    // 更新文件列表显示
+                    const fileItem = document.getElementById(`file-item-${i}`);
+                    if (fileItem) {
+                        const badge = fileItem.querySelector('.badge');
+                        if (!badge) {
+                            const span = fileItem.querySelector('span');
+                            const uploadBadge = document.createElement('span');
+                            uploadBadge.className = 'badge bg-success ms-2';
+                            uploadBadge.textContent = '已上传';
+                            span.appendChild(uploadBadge);
+                        }
+                    }
                 } else {
                     alert(`文件 ${file.name} 上传失败：${data.message}`);
                     submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 代客提交申请';
@@ -440,18 +494,47 @@ document.getElementById('businessApplyForm').addEventListener('submit', async fu
     // 文件上传完成后，提交表单
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+    submitBtn.disabled = true;
     
     // 使用FormData提交表单
     const formData = new FormData(e.target);
     fetch(e.target.action, {
         method: 'POST',
-        body: formData
+        body: formData,
+        redirect: 'manual'  // 手动处理重定向
     })
     .then(response => {
-        if (response.redirected) {
-            window.location.href = response.url;
+        // 检查响应状态码
+        if (response.status === 302 || response.status === 301) {
+            // 重定向响应，从Location头获取目标URL
+            const location = response.headers.get('Location');
+            if (location) {
+                window.location.href = location;
+            } else {
+                // 如果没有Location头，使用默认跳转
+                window.location.href = '/staff/business_dashboard';
+            }
+        } else if (response.status === 200) {
+            // 200响应，检查是否重定向（某些浏览器会跟随重定向）
+            if (response.redirected && response.url) {
+                window.location.href = response.url;
+            } else {
+                // 检查响应URL是否改变
+                if (response.url && response.url !== e.target.action) {
+                    window.location.href = response.url;
+                } else {
+                    // 默认跳转到业务面板
+                    window.location.href = '/staff/business_dashboard';
+                }
+            }
         } else {
-            return response.text();
+            // 其他状态码，尝试读取错误信息
+            return response.text().then(text => {
+                console.error('提交失败:', response.status, text);
+                alert('提交失败，请检查表单数据或联系管理员');
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 代客提交申请';
+                submitBtn.disabled = false;
+            });
         }
     })
     .catch(error => {

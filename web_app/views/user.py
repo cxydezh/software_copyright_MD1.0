@@ -488,3 +488,181 @@ def download_project_file(project_id, file_id):
     except Exception as e:
         current_app.logger.error(f"文件下载失败: {str(e)}")
         return jsonify({'success': False, 'message': f'文件下载失败: {str(e)}'})
+
+@user_bp.route('/project/<int:project_id>/file/<int:file_id>/delete', methods=['POST'])
+@login_required
+def delete_project_file(project_id, file_id):
+    """删除项目文件"""
+    try:
+        # 检查项目是否存在
+        project = Project.query.get_or_404(project_id)
+        
+        # 检查权限（只有项目申请人可以删除）
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'user':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        if project.applicant_id != current_user.id:
+            return jsonify({'success': False, 'message': '您没有权限删除此文件'})
+        
+        # 获取文件记录
+        project_file = ProjectFile.query.filter_by(
+            id=file_id, 
+            project_id=project_id, 
+            project_type='software'
+        ).first_or_404()
+        
+        # 删除物理文件
+        file_path = os.path.join(current_app.static_folder, project_file.file_path)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                current_app.logger.warning(f"删除物理文件失败: {str(e)}")
+        
+        # 删除数据库记录
+        db.session.delete(project_file)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '文件删除成功'})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"文件删除失败: {str(e)}")
+        import traceback
+        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'文件删除失败: {str(e)}'})
+
+@user_bp.route('/project/<int:project_id>/upload', methods=['POST'])
+@login_required
+def upload_project_file(project_id):
+    """用户项目文件上传"""
+    try:
+        # 检查权限
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'user':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 检查项目是否存在
+        project = Project.query.get_or_404(project_id)
+        
+        # 检查权限（只有项目申请人可以上传）
+        if project.applicant_id != current_user.id:
+            return jsonify({'success': False, 'message': '您没有权限上传此项目的文件'})
+        
+        # 检查是否有文件
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'message': '不支持的文件类型'})
+        
+        # 检查文件大小
+        is_valid_size, file_size = check_file_size(file)
+        if not is_valid_size:
+            size_mb = file_size / (1024 * 1024)
+            return jsonify({
+                'success': False, 
+                'message': f'文件大小超过限制（{size_mb:.2f}MB），单个文件不能超过16MB'
+            })
+        
+        # 生成安全的文件名
+        original_filename = file.filename
+        filename = secure_filename(file.filename)
+        file_ext = os.path.splitext(filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        
+        # 项目文件存储目录
+        project_dir = os.path.join(current_app.static_folder, 'uploads', 'projects', str(project_id))
+        os.makedirs(project_dir, exist_ok=True)
+        
+        # 保存文件
+        file_path = os.path.join(project_dir, unique_filename)
+        file.save(file_path)
+        
+        # 获取文件大小
+        file_size = os.path.getsize(file_path)
+        
+        # 获取文件分类
+        file_category = request.form.get('file_category', '其他文件')
+        
+        # 获取文件类型
+        try:
+            file_type = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else 'unknown'
+        except IndexError:
+            file_type = 'unknown'
+        
+        # 创建文件记录
+        project_file = ProjectFile(
+            project_id=project_id,
+            project_type='software',
+            file_name=original_filename,
+            file_path=os.path.join('uploads', 'projects', str(project_id), unique_filename),
+            file_type=file_type,
+            file_size=file_size,
+            uploader_id=current_user.id,
+            file_category=file_category
+        )
+        
+        db.session.add(project_file)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '文件上传成功',
+            'file': {
+                'id': project_file.id,
+                'file_name': project_file.file_name,
+                'file_type': project_file.file_type,
+                'file_size': project_file.file_size,
+                'file_category': project_file.file_category
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"文件上传失败: {str(e)}")
+        import traceback
+        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'文件上传失败: {str(e)}'})
+
+@user_bp.route('/apply_project/temp_file/delete', methods=['POST'])
+@login_required
+def delete_temp_file():
+    """删除临时上传的文件"""
+    try:
+        # 检查权限
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'user':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 获取文件路径
+        temp_file_path = request.json.get('temp_path')
+        if not temp_file_path:
+            return jsonify({'success': False, 'message': '缺少文件路径'})
+        
+        # 构建文件完整路径
+        file_path = os.path.join(current_app.static_folder, temp_file_path)
+        
+        # 检查文件是否在用户的临时目录中（安全验证）
+        user_temp_dir = os.path.join(current_app.static_folder, 'uploads', 'temp', str(current_user.id))
+        if not file_path.startswith(os.path.abspath(user_temp_dir)):
+            return jsonify({'success': False, 'message': '无权删除此文件'})
+        
+        # 删除物理文件
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                return jsonify({'success': True, 'message': '文件删除成功'})
+            except Exception as e:
+                current_app.logger.error(f"删除临时文件失败: {str(e)}")
+                return jsonify({'success': False, 'message': f'删除文件失败: {str(e)}'})
+        else:
+            return jsonify({'success': True, 'message': '文件不存在，已忽略'})
+        
+    except Exception as e:
+        current_app.logger.error(f"删除临时文件失败: {str(e)}")
+        import traceback
+        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'删除失败: {str(e)}'})
