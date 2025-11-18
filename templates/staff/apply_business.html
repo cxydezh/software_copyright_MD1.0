@@ -47,10 +47,10 @@
                                 <!-- 客户邮箱 -->
                                 <div class="mb-3">
                                     <label for="customer_email" class="form-label">
-                                        客户邮箱 <span class="text-danger">*</span>
+                                        客户邮箱 {% if customer_email_required %}<span class="text-danger">*</span>{% endif %}
                                     </label>
                                     <input type="email" class="form-control" id="customer_email" 
-                                           name="customer_email" required
+                                           name="customer_email" {% if customer_email_required %}required{% endif %}
                                            placeholder="请输入客户邮箱地址">
                                     <div class="form-text">系统将为客户自动创建账户</div>
                                 </div>
@@ -58,10 +58,10 @@
                                 <!-- 客户电话 -->
                                 <div class="mb-3">
                                     <label for="customer_phone" class="form-label">
-                                        客户电话 <span class="text-danger">*</span>
+                                        客户电话 {% if customer_phone_required %}<span class="text-danger">*</span>{% endif %}
                                     </label>
                                     <input type="tel" class="form-control" id="customer_phone" 
-                                           name="customer_phone" required
+                                           name="customer_phone" {% if customer_phone_required %}required{% endif %}
                                            placeholder="请输入客户联系电话" pattern="^1[3-9]\d{9}$">
                                 </div>
 
@@ -165,6 +165,30 @@
                             </div>
                         </div>
 
+                        <!-- 文件上传区域 -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-file-upload"></i> 附件上传（可选）
+                                </h6>
+                                <div class="mb-3">
+                                    <label for="fileInput" class="form-label">选择文件：</label>
+                                    <input type="file" class="form-control" id="fileInput" multiple>
+                                    <small class="form-text text-muted">支持的文件类型：PDF, DOC, DOCX, TXT, JPG, PNG, GIF, ZIP, RAR, XLS, XLSX。单个文件大小不能超过16MB</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fileCategory" class="form-label">文件分类：</label>
+                                    <select class="form-select" id="fileCategory">
+                                        <option value="申请材料">申请材料</option>
+                                        <option value="技术文档">技术文档</option>
+                                        <option value="证书文件">证书文件</option>
+                                        <option value="其他文件">其他文件</option>
+                                    </select>
+                                </div>
+                                <div id="fileList" class="mb-3"></div>
+                            </div>
+                        </div>
+
                         <!-- 提交按钮 -->
                         <div class="row mt-4">
                             <div class="col-12 text-center">
@@ -201,10 +225,18 @@
 
 {% block scripts %}
 <script>
-// 表单验证
-document.getElementById('businessApplyForm').addEventListener('submit', function(e) {
-    const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 
-                           'project_name', 'project_type', 'applicant_type', 'copyright_owner'];
+// 表单验证函数（在提交时调用）
+function validateForm() {
+    const requiredFields = ['customer_name', 'project_name', 'project_type', 'applicant_type', 'copyright_owner'];
+    
+    // 根据系统设置添加必填字段
+    {% if customer_email_required %}
+    requiredFields.push('customer_email');
+    {% endif %}
+    {% if customer_phone_required %}
+    requiredFields.push('customer_phone');
+    {% endif %}
+    
     let isValid = true;
     
     requiredFields.forEach(fieldName => {
@@ -217,33 +249,28 @@ document.getElementById('businessApplyForm').addEventListener('submit', function
         }
     });
     
-    // 验证邮箱格式
+    // 验证邮箱格式（如果填写了邮箱）
     const email = document.getElementById('customer_email').value;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email && !emailRegex.test(email)) {
-        document.getElementById('customer_email').classList.add('is-invalid');
-        isValid = false;
+    if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            document.getElementById('customer_email').classList.add('is-invalid');
+            isValid = false;
+        }
     }
     
-    // 验证手机号格式
+    // 验证手机号格式（如果填写了手机号）
     const phone = document.getElementById('customer_phone').value;
-    const phoneRegex = /^1[3-9]\d{9}$/;
-    if (phone && !phoneRegex.test(phone)) {
-        document.getElementById('customer_phone').classList.add('is-invalid');
-        isValid = false;
+    if (phone) {
+        const phoneRegex = /^1[3-9]\d{9}$/;
+        if (!phoneRegex.test(phone)) {
+            document.getElementById('customer_phone').classList.add('is-invalid');
+            isValid = false;
+        }
     }
     
-    if (!isValid) {
-        e.preventDefault();
-        alert('请填写所有必填字段并确保格式正确');
-        return false;
-    }
-    
-    // 显示提交状态
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
-    submitBtn.disabled = true;
-});
+    return isValid;
+}
 
 // 申请人类型变化时的提示
 document.getElementById('applicant_type').addEventListener('change', function() {
@@ -266,6 +293,173 @@ document.getElementById('applicant_type').addEventListener('change', function() 
         default:
             copyrightOwnerField.placeholder = '请输入著作权人姓名或单位名称';
     }
+});
+
+// 文件上传功能
+let uploadedFiles = [];
+
+// 文件大小限制（16MB）
+const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
+
+document.getElementById('fileInput').addEventListener('change', function() {
+    const files = this.files;
+    const fileListDiv = document.getElementById('fileList');
+    fileListDiv.innerHTML = '';
+    
+    if (files.length > 0) {
+        const list = document.createElement('ul');
+        list.className = 'list-group';
+        let hasError = false;
+        
+        Array.from(files).forEach((file, index) => {
+            // 检查文件大小
+            if (file.size > MAX_FILE_SIZE) {
+                hasError = true;
+                const errorItem = document.createElement('li');
+                errorItem.className = 'list-group-item list-group-item-danger';
+                errorItem.innerHTML = `
+                    <span>
+                        <i class="fas fa-exclamation-triangle"></i> ${file.name} 
+                        <small class="text-danger">(${(file.size / (1024 * 1024)).toFixed(2)} MB - 超过16MB限制)</small>
+                    </span>
+                `;
+                list.appendChild(errorItem);
+                return;
+            }
+            
+            const listItem = document.createElement('li');
+            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+            listItem.innerHTML = `
+                <span>
+                    <i class="fas fa-file"></i> ${file.name} 
+                    <small class="text-muted">(${(file.size / 1024).toFixed(2)} KB)</small>
+                </span>
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            list.appendChild(listItem);
+        });
+        
+        fileListDiv.appendChild(list);
+        
+        if (hasError) {
+            alert('部分文件超过16MB限制，请重新选择');
+        }
+    }
+});
+
+function removeFile(index) {
+    const fileInput = document.getElementById('fileInput');
+    const dt = new DataTransfer();
+    const files = Array.from(fileInput.files);
+    
+    files.splice(index, 1);
+    files.forEach(file => dt.items.add(file));
+    fileInput.files = dt.files;
+    
+    // 触发change事件更新列表
+    fileInput.dispatchEvent(new Event('change'));
+}
+
+// 修改表单提交逻辑，先上传文件
+document.getElementById('businessApplyForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // 先进行表单验证
+    if (!validateForm()) {
+        alert('请填写所有必填字段并确保格式正确');
+        return false;
+    }
+    
+    // 上传文件
+    const fileInput = document.getElementById('fileInput');
+    const fileCategory = document.getElementById('fileCategory').value;
+    uploadedFiles = [];
+    
+    if (fileInput.files && fileInput.files.length > 0) {
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传文件中...';
+        submitBtn.disabled = true;
+        
+        try {
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('file_category', fileCategory);
+                
+                const response = await fetch('/staff/apply_business/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                // 检查响应状态
+                if (response.status === 413) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '文件大小超过限制');
+                }
+                
+                const data = await response.json();
+                if (data.success) {
+                    uploadedFiles.push(data.file.temp_path);
+                    // 添加隐藏字段
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'temp_files[]';
+                    hiddenInput.value = data.file.temp_path;
+                    e.target.appendChild(hiddenInput);
+                    
+                    const nameInput = document.createElement('input');
+                    nameInput.type = 'hidden';
+                    nameInput.name = `file_name_${data.file.temp_path}`;
+                    nameInput.value = data.file.original_name;
+                    e.target.appendChild(nameInput);
+                    
+                    const categoryInput = document.createElement('input');
+                    categoryInput.type = 'hidden';
+                    categoryInput.name = `file_category_${data.file.temp_path}`;
+                    categoryInput.value = fileCategory;
+                    e.target.appendChild(categoryInput);
+                } else {
+                    alert(`文件 ${file.name} 上传失败：${data.message}`);
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 代客提交申请';
+                    submitBtn.disabled = false;
+                    return false;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('文件上传失败，请重试');
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 代客提交申请';
+            submitBtn.disabled = false;
+            return false;
+        }
+    }
+    
+    // 文件上传完成后，提交表单
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+    
+    // 使用FormData提交表单
+    const formData = new FormData(e.target);
+    fetch(e.target.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else {
+            return response.text();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('提交失败，请重试');
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 代客提交申请';
+        submitBtn.disabled = false;
+    });
 });
 </script>
 {% endblock %}

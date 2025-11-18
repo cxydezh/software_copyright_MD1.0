@@ -508,6 +508,50 @@ class ProjectFile(db.Model):
     def __repr__(self):
         return f'<ProjectFile {self.file_name}>'
 
+class SystemSettings(db.Model):
+    """系统设置表"""
+    __tablename__ = 'system_settings'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    setting_key = db.Column(db.String(100), unique=True, nullable=False, comment='设置键')
+    setting_value = db.Column(db.String(500), nullable=False, comment='设置值')
+    setting_description = db.Column(db.String(500), comment='设置描述')
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment='更新时间')
+    updated_by = db.Column(db.Integer, db.ForeignKey('staff.id', ondelete='SET NULL'), comment='更新者ID')
+    
+    # 关系
+    updater = db.relationship('Staff', backref='updated_settings')
+    
+    def __repr__(self):
+        return f'<SystemSettings {self.setting_key}={self.setting_value}>'
+    
+    @staticmethod
+    def get_setting(key, default_value=''):
+        """获取设置值"""
+        setting = SystemSettings.query.filter_by(setting_key=key).first()
+        return setting.setting_value if setting else default_value
+    
+    @staticmethod
+    def set_setting(key, value, description='', updater_id=None):
+        """设置值"""
+        setting = SystemSettings.query.filter_by(setting_key=key).first()
+        if setting:
+            setting.setting_value = value
+            setting.setting_description = description or setting.setting_description
+            setting.updated_at = datetime.utcnow()
+            if updater_id:
+                setting.updated_by = updater_id
+        else:
+            setting = SystemSettings(
+                setting_key=key,
+                setting_value=value,
+                setting_description=description,
+                updated_by=updater_id
+            )
+            db.session.add(setting)
+        db.session.commit()
+        return setting
+
 class LocalProject:
     """本地项目表（SQLite）"""
     

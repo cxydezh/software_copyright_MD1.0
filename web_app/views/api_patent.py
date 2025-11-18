@@ -23,6 +23,9 @@ api_patent_bp = Blueprint('api_patent', __name__)
 # 允许的文件类型
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif'}
 
+# 文件大小限制（16MB）
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
+
 def allowed_file(filename):
     """检查文件类型是否允许"""
     if not filename or '.' not in filename:
@@ -32,6 +35,14 @@ def allowed_file(filename):
         return extension in ALLOWED_EXTENSIONS
     except IndexError:
         return False
+
+def check_file_size(file):
+    """检查文件大小是否在限制内"""
+    # 获取文件大小（通过读取文件流位置）
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)  # 重置文件指针
+    return file_size <= MAX_FILE_SIZE, file_size
 
 @api_patent_bp.route('/patent/<int:patent_id>/upload', methods=['POST'])
 @login_required
@@ -56,6 +67,15 @@ def upload_patent_file(patent_id):
         
         if not allowed_file(file.filename):
             return jsonify({'success': False, 'message': '不支持的文件类型'})
+        
+        # 检查文件大小
+        is_valid_size, file_size = check_file_size(file)
+        if not is_valid_size:
+            size_mb = file_size / (1024 * 1024)
+            return jsonify({
+                'success': False, 
+                'message': f'文件大小超过限制（{size_mb:.2f}MB），单个文件不能超过16MB'
+            })
         
         # 生成安全的文件名
         original_filename = file.filename

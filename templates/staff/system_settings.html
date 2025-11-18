@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}系统设置 - 郑州医企创医疗科技有限公司{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box">
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('staff.business_dashboard') }}">业务员工作台</a></li>
+                        <li class="breadcrumb-item active">系统设置</li>
+                    </ol>
+                </div>
+                <h4 class="page-title">系统设置</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog"></i> 代客申请设置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="settingsForm">
+                        <!-- 客户电话设置 -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">
+                                    <strong>客户电话</strong>
+                                </label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="customer_phone_required" 
+                                           name="customer_phone_required"
+                                           value="true"
+                                           {% if customer_phone_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="customer_phone_required">
+                                        <span id="phone_status_text">
+                                            {% if customer_phone_required %}必填{% else %}非必填{% endif %}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            <p class="text-muted small mb-0">
+                                当设置为"必填"时，业务员在代客申请时必须填写客户电话；设置为"非必填"时，可以不填写客户电话。
+                            </p>
+                        </div>
+
+                        <hr>
+
+                        <!-- 客户邮箱设置 -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">
+                                    <strong>客户邮箱</strong>
+                                </label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="customer_email_required" 
+                                           name="customer_email_required"
+                                           value="true"
+                                           {% if customer_email_required %}checked{% endif %}>
+                                    <label class="form-check-label" for="customer_email_required">
+                                        <span id="email_status_text">
+                                            {% if customer_email_required %}必填{% else %}非必填{% endif %}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            <p class="text-muted small mb-0">
+                                当设置为"必填"时，业务员在代客申请时必须填写客户邮箱；设置为"非必填"时，可以不填写客户邮箱。
+                            </p>
+                        </div>
+
+                        <!-- 提交按钮 -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <button type="button" class="btn btn-secondary me-3" onclick="history.back()">
+                                    <i class="fas fa-arrow-left"></i> 返回
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> 保存设置
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 设置说明 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-info"></i> 设置说明
+                    </h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li>• 系统设置仅对代客申请功能生效</li>
+                        <li>• 修改设置后立即生效，无需重启系统</li>
+                        <li>• 设置为"必填"时，业务员必须填写对应字段才能提交申请</li>
+                        <li>• 设置为"非必填"时，业务员可以不填写对应字段</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 更新状态文本
+document.getElementById('customer_phone_required').addEventListener('change', function() {
+    document.getElementById('phone_status_text').textContent = this.checked ? '必填' : '非必填';
+});
+
+document.getElementById('customer_email_required').addEventListener('change', function() {
+    document.getElementById('email_status_text').textContent = this.checked ? '必填' : '非必填';
+});
+
+// 表单提交
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

@@ -1,13 +1,41 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import sys
 import os
+import uuid
+import mimetypes
+import shutil
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database.models import db, Project, PaperProject, PatentProject, Message, ProcessLog
+from database.models import db, Project, PaperProject, PatentProject, Message, ProcessLog, ProjectFile
+
+# 允许的文件类型
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'rar', 'xls', 'xlsx'}
+
+# 文件大小限制（16MB）
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
+
+def allowed_file(filename):
+    """检查文件类型是否允许"""
+    if not filename or '.' not in filename:
+        return False
+    try:
+        extension = filename.rsplit('.', 1)[1].lower()
+        return extension in ALLOWED_EXTENSIONS
+    except IndexError:
+        return False
+
+def check_file_size(file):
+    """检查文件大小是否在限制内"""
+    # 获取文件大小（通过读取文件流位置）
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)  # 重置文件指针
+    return file_size <= MAX_FILE_SIZE, file_size
 
 user_bp = Blueprint('user', __name__)
 
@@ -121,6 +149,59 @@ def apply_project():
             )
             
             db.session.add(new_project)
+            db.session.flush()  # 获取项目ID
+            
+            # 处理临时上传的文件
+            temp_files = request.form.getlist('temp_files[]')
+            if temp_files:
+                temp_dir = os.path.join(current_app.static_folder, 'uploads', 'temp', str(current_user.id))
+                project_dir = os.path.join(current_app.static_folder, 'uploads', 'projects', str(new_project.id))
+                os.makedirs(project_dir, exist_ok=True)
+                
+                for temp_file_path in temp_files:
+                    try:
+                        # 构建临时文件完整路径
+                        temp_full_path = os.path.join(current_app.static_folder, temp_file_path)
+                        if os.path.exists(temp_full_path):
+                            # 获取文件名
+                            temp_filename = os.path.basename(temp_file_path)
+                            # 生成新的唯一文件名
+                            file_ext = os.path.splitext(temp_filename)[1]
+                            unique_filename = f"{uuid.uuid4()}{file_ext}"
+                            
+                            # 移动到项目目录
+                            new_file_path = os.path.join(project_dir, unique_filename)
+                            shutil.move(temp_full_path, new_file_path)
+                            
+                            # 获取文件信息
+                            file_size = os.path.getsize(new_file_path)
+                            # 获取原始文件名
+                            original_name = request.form.get(f'file_name_{temp_file_path}', temp_filename)
+                            
+                            # 获取文件类型
+                            try:
+                                file_type = original_name.rsplit('.', 1)[1].lower() if '.' in original_name else 'unknown'
+                            except IndexError:
+                                file_type = 'unknown'
+                            
+                            # 创建文件记录
+                            project_file = ProjectFile(
+                                project_id=new_project.id,
+                                project_type='software',
+                                file_name=original_name,
+                                file_path=os.path.join('uploads', 'projects', str(new_project.id), unique_filename),
+                                file_type=file_type,
+                                file_size=file_size,
+                                uploader_id=current_user.id,
+                                file_category=request.form.get(f'file_category_{temp_file_path}', '其他文件')
+                            )
+                            db.session.add(project_file)
+                    except Exception as e:
+                        current_app.logger.error(f"处理临时文件失败: {str(e)}")
+                        import traceback
+                        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+                        # 继续处理其他文件
+            
             db.session.commit()
             
             flash('项目申请提交成功', 'success')
@@ -128,6 +209,9 @@ def apply_project():
             
         except Exception as e:
             db.session.rollback()
+            current_app.logger.error(f"项目申请提交失败: {str(e)}")
+            import traceback
+            current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
             flash('项目申请提交失败，请重试', 'danger')
     
     # 项目类型选项
@@ -158,9 +242,16 @@ def project_detail(project_id):
     # 获取项目相关的消息
     project_messages = Message.query.filter_by(project_id=project_id).order_by(Message.create_time.desc()).all()
     
+    # 获取项目文件列表
+    project_files = ProjectFile.query.filter_by(
+        project_id=project_id,
+        project_type='software'
+    ).order_by(ProjectFile.upload_time.desc()).all()
+    
     return render_template('user/project_detail.html', 
                          project=project,
-                         messages=project_messages)
+                         messages=project_messages,
+                         project_files=project_files)
 
 @user_bp.route('/project/<int:project_id>/resubmit', methods=['POST'])
 @login_required
@@ -289,3 +380,111 @@ def profile():
             flash('资料更新失败，请重试', 'danger')
     
     return render_template('user/profile.html')
+
+# ==================== 文件上传和下载相关路由 ====================
+
+@user_bp.route('/apply_project/upload', methods=['POST'])
+@login_required
+def upload_apply_project_file():
+    """用户申请项目时上传文件（临时存储，提交申请后关联到项目）"""
+    try:
+        # 检查权限
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'user':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 检查是否有文件
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'message': '不支持的文件类型'})
+        
+        # 检查文件大小
+        is_valid_size, file_size = check_file_size(file)
+        if not is_valid_size:
+            size_mb = file_size / (1024 * 1024)
+            return jsonify({
+                'success': False, 
+                'message': f'文件大小超过限制（{size_mb:.2f}MB），单个文件不能超过16MB'
+            })
+        
+        # 生成安全的文件名
+        original_filename = file.filename
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        
+        # 临时存储目录（使用用户ID）
+        temp_dir = os.path.join(current_app.static_folder, 'uploads', 'temp', str(current_user.id))
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # 保存文件
+        file_path = os.path.join(temp_dir, unique_filename)
+        file.save(file_path)
+        
+        # 获取文件大小
+        file_size = os.path.getsize(file_path)
+        
+        # 获取文件分类
+        file_category = request.form.get('file_category', '其他文件')
+        
+        # 返回临时文件信息（存储在表单中，提交申请时关联到项目）
+        return jsonify({
+            'success': True,
+            'message': '文件上传成功',
+            'file': {
+                'temp_path': os.path.join('uploads', 'temp', str(current_user.id), unique_filename),
+                'original_name': original_filename,
+                'size': file_size,
+                'category': file_category
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"文件上传失败: {str(e)}")
+        import traceback
+        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'文件上传失败: {str(e)}'})
+
+@user_bp.route('/project/<int:project_id>/file/<int:file_id>/download')
+@login_required
+def download_project_file(project_id, file_id):
+    """下载项目文件"""
+    try:
+        # 检查项目是否存在
+        project = Project.query.get_or_404(project_id)
+        
+        # 检查权限（只有项目申请人可以下载）
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'user':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        if project.applicant_id != current_user.id:
+            return jsonify({'success': False, 'message': '您没有权限下载此文件'})
+        
+        # 获取文件记录
+        project_file = ProjectFile.query.filter_by(
+            id=file_id, 
+            project_id=project_id, 
+            project_type='software'
+        ).first_or_404()
+        
+        # 构建文件完整路径
+        file_path = os.path.join(current_app.static_folder, project_file.file_path)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'message': '文件不存在'})
+        
+        # 发送文件
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=project_file.file_name,
+            mimetype=mimetypes.guess_type(project_file.file_name)[0] or 'application/octet-stream'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"文件下载失败: {str(e)}")
+        return jsonify({'success': False, 'message': f'文件下载失败: {str(e)}'})

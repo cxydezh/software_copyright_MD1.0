@@ -347,6 +347,7 @@
                     <div class="mb-3">
                         <label for="file" class="form-label">选择文件</label>
                         <input type="file" class="form-control" id="file" name="file" required>
+                        <small class="form-text text-muted">支持的文件类型：PDF, DOC, DOCX, TXT, JPG, PNG, GIF。单个文件大小不能超过16MB</small>
                     </div>
                     <div class="mb-3">
                         <label for="file_category" class="form-label">文件分类</label>
@@ -370,15 +371,38 @@
 
 {% block scripts %}
 <script>
+// 文件大小限制（16MB）
+const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
+
 function uploadFile() {
     var form = document.getElementById('uploadForm');
+    var fileInput = form.querySelector('input[type="file"]');
+    
+    // 检查文件大小
+    if (fileInput.files && fileInput.files.length > 0) {
+        var file = fileInput.files[0];
+        if (file.size > MAX_FILE_SIZE) {
+            var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            alert('文件大小超过限制（' + sizeMB + 'MB），单个文件不能超过16MB');
+            return;
+        }
+    }
+    
     var formData = new FormData(form);
     
     fetch('{{ url_for("api_paper.upload_paper_file", paper_id=paper.id) }}', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        // 检查响应状态
+        if (response.status === 413) {
+            return response.json().then(data => {
+                throw new Error(data.message || '文件大小超过限制');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             alert('文件上传成功');
@@ -389,7 +413,7 @@ function uploadFile() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('文件上传失败，请重试');
+        alert('文件上传失败：' + (error.message || '请重试'));
     });
 }
 

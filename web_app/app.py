@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail
 from werkzeug.security import check_password_hash
+from werkzeug.exceptions import RequestEntityTooLarge
 import os
 import sys
 
@@ -100,6 +101,36 @@ def create_app(config_name=None):
             'current_user': current_user,
             'enumerate': enumerate
         }
+    
+    # 错误处理器：处理文件上传大小超限
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_file_too_large(e):
+        """处理文件上传大小超限错误"""
+        try:
+            # 尝试获取请求路径
+            path = getattr(request, 'path', '')
+            # 判断是否为API请求
+            is_api_request = (path.startswith('/api/') or 
+                            path.startswith('/user/') or 
+                            path.startswith('/staff/') or
+                            path.startswith('/paper/') or
+                            path.startswith('/patent/'))
+            
+            if is_api_request:
+                return jsonify({
+                    'success': False,
+                    'message': '文件大小超过限制，单个文件不能超过16MB'
+                }), 413
+            else:
+                flash('文件大小超过限制，单个文件不能超过16MB', 'danger')
+                referrer = getattr(request, 'referrer', None)
+                return redirect(referrer or url_for('main.index')), 413
+        except Exception:
+            # 如果无法获取请求信息，返回JSON格式错误
+            return jsonify({
+                'success': False,
+                'message': '文件大小超过限制，单个文件不能超过16MB'
+            }), 413
     
     return app
 

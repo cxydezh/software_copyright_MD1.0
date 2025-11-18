@@ -12,6 +12,17 @@ import uuid
 
 patent_bp = Blueprint('patent', __name__, url_prefix='/patent')
 
+# 文件大小限制（16MB）
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
+
+def check_file_size(file):
+    """检查文件大小是否在限制内"""
+    # 获取文件大小（通过读取文件流位置）
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)  # 重置文件指针
+    return file_size <= MAX_FILE_SIZE, file_size
+
 @patent_bp.route('/')
 @login_required
 def index():
@@ -149,6 +160,15 @@ def upload_file(patent_id):
     
     if file:
         try:
+            # 检查文件大小
+            is_valid_size, file_size = check_file_size(file)
+            if not is_valid_size:
+                size_mb = file_size / (1024 * 1024)
+                return jsonify({
+                    'success': False, 
+                    'message': f'文件大小超过限制（{size_mb:.2f}MB），单个文件不能超过16MB'
+                })
+            
             # 生成唯一文件名
             file_extension = os.path.splitext(file.filename)[1]
             unique_filename = f"{uuid.uuid4().hex}{file_extension}"

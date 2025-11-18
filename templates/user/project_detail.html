@@ -161,6 +161,72 @@
                     {% endif %}
                 </div>
             </div>
+            
+            <!-- 项目文件 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file"></i> 项目文件
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if project_files %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>文件类型</th>
+                                    <th>文件分类</th>
+                                    <th>文件大小</th>
+                                    <th>上传时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in project_files %}
+                                <tr>
+                                    <td>
+                                        <i class="fas fa-file"></i> {{ file.file_name }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ file.file_type.upper() }}</span>
+                                    </td>
+                                    <td>{{ file.file_category }}</td>
+                                    <td>
+                                        {% if file.file_size %}
+                                            {% if file.file_size < 1024 %}
+                                                {{ file.file_size }} B
+                                            {% elif file.file_size < 1048576 %}
+                                                {{ "%.2f"|format(file.file_size / 1024) }} KB
+                                            {% else %}
+                                                {{ "%.2f"|format(file.file_size / 1048576) }} MB
+                                            {% endif %}
+                                        {% else %}
+                                            未知
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ file.upload_time.strftime('%Y-%m-%d %H:%M') if file.upload_time else '未知' }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('user.download_project_file', project_id=project.id, file_id=file.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" title="下载">
+                                            <i class="fas fa-download"></i> 下载
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">暂无文件</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
         
         <!-- 操作面板 -->

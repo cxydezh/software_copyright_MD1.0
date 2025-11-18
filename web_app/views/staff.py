@@ -1,14 +1,42 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import sys
 import os
+import uuid
+import mimetypes
+import shutil
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from database.models import db, Project, Message, User, Staff, ProcessLog, Permission
+from database.models import db, Project, Message, User, Staff, ProcessLog, Permission, SystemSettings, ProjectFile
 from werkzeug.security import generate_password_hash
+
+# 允许的文件类型
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'rar', 'xls', 'xlsx'}
+
+# 文件大小限制（16MB）
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
+
+def allowed_file(filename):
+    """检查文件类型是否允许"""
+    if not filename or '.' not in filename:
+        return False
+    try:
+        extension = filename.rsplit('.', 1)[1].lower()
+        return extension in ALLOWED_EXTENSIONS
+    except IndexError:
+        return False
+
+def check_file_size(file):
+    """检查文件大小是否在限制内"""
+    # 获取文件大小（通过读取文件流位置）
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)  # 重置文件指针
+    return file_size <= MAX_FILE_SIZE, file_size
 
 staff_bp = Blueprint('staff', __name__)
 
@@ -197,10 +225,17 @@ def project_detail(project_id):
     # 获取项目相关的消息
     project_messages = Message.query.filter_by(project_id=project_id).order_by(Message.create_time.desc()).all()
     
+    # 获取项目文件列表
+    project_files = ProjectFile.query.filter_by(
+        project_id=project_id,
+        project_type='software'
+    ).order_by(ProjectFile.upload_time.desc()).all()
+    
     return render_template('staff/project_detail.html',
                          project=project,
                          applicant=applicant,
-                         messages=project_messages)
+                         messages=project_messages,
+                         project_files=project_files)
 
 @staff_bp.route('/project/<int:project_id>/confirm', methods=['POST'])
 @login_required
@@ -598,6 +633,10 @@ def apply_business():
         flash('权限不足', 'danger')
         return redirect(url_for('main.index'))
     
+    # 获取系统设置
+    customer_phone_required = SystemSettings.get_setting('apply_business_customer_phone_required', 'true').lower() == 'true'
+    customer_email_required = SystemSettings.get_setting('apply_business_customer_email_required', 'true').lower() == 'true'
+    
     if request.method == 'POST':
         # 获取客户信息
         customer_name = request.form.get('customer_name')
@@ -614,25 +653,51 @@ def apply_business():
         priority = request.form.get('priority', '普通')
         remarks = request.form.get('remarks')
         
-        # 验证必填字段
-        if not all([customer_name, customer_email, customer_phone, project_name, project_type, applicant_type, copyright_owner]):
-            flash('请填写所有必填字段', 'danger')
-            return render_template('staff/apply_business.html')
+        # 验证必填字段（根据系统设置）
+        required_fields = [customer_name, project_name, project_type, applicant_type, copyright_owner]
+        if customer_email_required:
+            required_fields.append(customer_email)
+        if customer_phone_required:
+            required_fields.append(customer_phone)
+        
+        if not all(required_fields):
+            missing_fields = []
+            if not customer_name:
+                missing_fields.append('客户姓名')
+            if customer_email_required and not customer_email:
+                missing_fields.append('客户邮箱')
+            if customer_phone_required and not customer_phone:
+                missing_fields.append('客户电话')
+            if not project_name:
+                missing_fields.append('项目名称')
+            if not project_type:
+                missing_fields.append('项目类型')
+            if not applicant_type:
+                missing_fields.append('申请人类型')
+            if not copyright_owner:
+                missing_fields.append('著作权人')
+            flash(f'请填写所有必填字段：{", ".join(missing_fields)}', 'danger')
+            return render_template('staff/apply_business.html', 
+                                 customer_phone_required=customer_phone_required,
+                                 customer_email_required=customer_email_required)
         
         try:
             # 检查客户是否已存在
-            existing_user = User.query.filter_by(email=customer_email).first()
+            existing_user = User.query.filter_by(email=customer_email).first() if customer_email else None
             
             if not existing_user:
                 # 创建新用户
                 new_user = User(
                     name=customer_name,
-                    email=customer_email,
-                    phone=customer_phone,
-                    id_number=customer_id_number
+                    email=customer_email or '',
+                    phone=customer_phone or '',
+                    id_number=customer_id_number or ''
                 )
-                # 设置默认密码为手机号后6位
-                default_password = customer_phone[-6:] if len(customer_phone) >= 6 else '123456'
+                # 设置默认密码为手机号后6位（如果有手机号），否则使用默认密码
+                if customer_phone and len(customer_phone) >= 6:
+                    default_password = customer_phone[-6:]
+                else:
+                    default_password = '123456'
                 new_user.set_password(default_password)
                 
                 db.session.add(new_user)
@@ -660,6 +725,59 @@ def apply_business():
             )
             
             db.session.add(new_project)
+            db.session.flush()  # 获取项目ID
+            
+            # 处理临时上传的文件
+            temp_files = request.form.getlist('temp_files[]')
+            if temp_files:
+                temp_dir = os.path.join(current_app.static_folder, 'uploads', 'temp', str(current_user.id))
+                project_dir = os.path.join(current_app.static_folder, 'uploads', 'projects', str(new_project.id))
+                os.makedirs(project_dir, exist_ok=True)
+                
+                for temp_file_path in temp_files:
+                    try:
+                        # 构建临时文件完整路径
+                        temp_full_path = os.path.join(current_app.static_folder, temp_file_path)
+                        if os.path.exists(temp_full_path):
+                            # 获取文件名
+                            temp_filename = os.path.basename(temp_file_path)
+                            # 生成新的唯一文件名
+                            file_ext = os.path.splitext(temp_filename)[1]
+                            unique_filename = f"{uuid.uuid4()}{file_ext}"
+                            
+                            # 移动到项目目录
+                            new_file_path = os.path.join(project_dir, unique_filename)
+                            shutil.move(temp_full_path, new_file_path)
+                            
+                            # 获取文件信息
+                            file_size = os.path.getsize(new_file_path)
+                            # 获取原始文件名
+                            original_name = request.form.get(f'file_name_{temp_file_path}', temp_filename)
+                            
+                            # 获取文件类型
+                            try:
+                                file_type = original_name.rsplit('.', 1)[1].lower() if '.' in original_name else 'unknown'
+                            except IndexError:
+                                file_type = 'unknown'
+                            
+                            # 创建文件记录
+                            project_file = ProjectFile(
+                                project_id=new_project.id,
+                                project_type='software',
+                                file_name=original_name,
+                                file_path=os.path.join('uploads', 'projects', str(new_project.id), unique_filename),
+                                file_type=file_type,
+                                file_size=file_size,
+                                uploader_id=customer.id,
+                                file_category=request.form.get(f'file_category_{temp_file_path}', '其他文件')
+                            )
+                            db.session.add(project_file)
+                    except Exception as e:
+                        current_app.logger.error(f"处理临时文件失败: {str(e)}")
+                        import traceback
+                        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+                        # 继续处理其他文件
+            
             db.session.commit()
             
             flash('代客申请提交成功，项目已进入确认状态', 'success')
@@ -669,7 +787,9 @@ def apply_business():
             db.session.rollback()
             flash('代客申请提交失败，请重试', 'danger')
     
-    return render_template('staff/apply_business.html')
+    return render_template('staff/apply_business.html',
+                         customer_phone_required=customer_phone_required,
+                         customer_email_required=customer_email_required)
 
 @staff_bp.route('/project_query')
 @login_required
@@ -707,6 +827,51 @@ def user_management():
                          pending_staff=pending_staff,
                          approved_staff=approved_staff,
                          all_users=all_users)
+
+@staff_bp.route('/system_settings', methods=['GET', 'POST'])
+@login_required
+def system_settings():
+    """系统设置页面（仅系统管理员）"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # 检查是否为系统管理员
+    if not (hasattr(current_user, 'position') and current_user.position and current_user.position.position == '系统管理员'):
+        flash('您不是系统管理员，无权访问此页面', 'danger')
+        return redirect(url_for('staff.business_dashboard'))
+    
+    if request.method == 'POST':
+        # 更新设置
+        customer_phone_required = request.form.get('customer_phone_required', 'false')
+        customer_email_required = request.form.get('customer_email_required', 'false')
+        
+        try:
+            SystemSettings.set_setting(
+                'apply_business_customer_phone_required',
+                customer_phone_required,
+                '代客申请时客户电话是否必填',
+                current_user.id
+            )
+            SystemSettings.set_setting(
+                'apply_business_customer_email_required',
+                customer_email_required,
+                '代客申请时客户邮箱是否必填',
+                current_user.id
+            )
+            flash('设置已保存', 'success')
+            return redirect(url_for('staff.system_settings'))
+        except Exception as e:
+            db.session.rollback()
+            flash('保存设置失败，请重试', 'danger')
+    
+    # 获取当前设置
+    customer_phone_required = SystemSettings.get_setting('apply_business_customer_phone_required', 'true').lower() == 'true'
+    customer_email_required = SystemSettings.get_setting('apply_business_customer_email_required', 'true').lower() == 'true'
+    
+    return render_template('staff/system_settings.html',
+                         customer_phone_required=customer_phone_required,
+                         customer_email_required=customer_email_required)
 
 @staff_bp.route('/approve_staff/<int:staff_id>', methods=['POST'])
 @login_required
@@ -951,3 +1116,203 @@ def delete_staff(staff_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': '删除失败，请重试'})
+
+# ==================== 文件上传和下载相关路由 ====================
+
+@staff_bp.route('/project/<int:project_id>/upload', methods=['POST'])
+@login_required
+def upload_project_file(project_id):
+    """上传项目文件"""
+    try:
+        # 检查项目是否存在
+        project = Project.query.get_or_404(project_id)
+        
+        # 检查权限（业务员可以上传）
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 检查是否有文件
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'message': '不支持的文件类型'})
+        
+        # 检查文件大小
+        is_valid_size, file_size = check_file_size(file)
+        if not is_valid_size:
+            size_mb = file_size / (1024 * 1024)
+            return jsonify({
+                'success': False, 
+                'message': f'文件大小超过限制（{size_mb:.2f}MB），单个文件不能超过16MB'
+            })
+        
+        # 生成安全的文件名
+        original_filename = file.filename
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        
+        # 确保上传目录存在
+        upload_dir = os.path.join(current_app.static_folder, 'uploads', 'projects', str(project_id))
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 保存文件
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+        
+        # 获取文件大小
+        file_size = os.path.getsize(file_path)
+        
+        # 获取文件分类
+        file_category = request.form.get('file_category', '其他文件')
+        
+        # 生成相对路径用于数据库存储
+        relative_path = os.path.join('uploads', 'projects', str(project_id), unique_filename)
+        
+        # 获取文件类型
+        try:
+            file_type = filename.rsplit('.', 1)[1].lower()
+        except IndexError:
+            file_type = 'unknown'
+        
+        # 保存文件记录到数据库
+        project_file = ProjectFile(
+            project_id=project_id,
+            project_type='software',
+            file_name=original_filename,  # 存储原始文件名
+            file_path=relative_path,  # 存储相对路径
+            file_type=file_type,
+            file_size=file_size,
+            uploader_id=project.applicant_id,  # 使用项目申请人的ID
+            file_category=file_category
+        )
+        
+        db.session.add(project_file)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '文件上传成功',
+            'file': {
+                'id': project_file.id,
+                'name': original_filename,
+                'size': file_size,
+                'type': project_file.file_type,
+                'category': file_category,
+                'upload_time': project_file.upload_time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"文件上传失败: {str(e)}")
+        import traceback
+        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'文件上传失败: {str(e)}'})
+
+@staff_bp.route('/project/<int:project_id>/file/<int:file_id>/download')
+@login_required
+def download_project_file(project_id, file_id):
+    """下载项目文件"""
+    try:
+        # 检查项目是否存在
+        project = Project.query.get_or_404(project_id)
+        
+        # 检查权限
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 获取文件记录
+        project_file = ProjectFile.query.filter_by(
+            id=file_id, 
+            project_id=project_id, 
+            project_type='software'
+        ).first_or_404()
+        
+        # 构建文件完整路径
+        file_path = os.path.join(current_app.static_folder, project_file.file_path)
+        
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'message': '文件不存在'})
+        
+        # 发送文件
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=project_file.file_name,
+            mimetype=mimetypes.guess_type(project_file.file_name)[0] or 'application/octet-stream'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"文件下载失败: {str(e)}")
+        return jsonify({'success': False, 'message': f'文件下载失败: {str(e)}'})
+
+@staff_bp.route('/apply_business/upload', methods=['POST'])
+@login_required
+def upload_apply_business_file():
+    """代客申请时上传文件（临时存储，提交申请后关联到项目）"""
+    try:
+        # 检查权限
+        if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+            return jsonify({'success': False, 'message': '权限不足'})
+        
+        # 检查是否有文件
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': '没有选择文件'})
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'message': '不支持的文件类型'})
+        
+        # 检查文件大小
+        is_valid_size, file_size = check_file_size(file)
+        if not is_valid_size:
+            size_mb = file_size / (1024 * 1024)
+            return jsonify({
+                'success': False, 
+                'message': f'文件大小超过限制（{size_mb:.2f}MB），单个文件不能超过16MB'
+            })
+        
+        # 生成安全的文件名
+        original_filename = file.filename
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        
+        # 临时存储目录（使用session ID或用户ID）
+        temp_dir = os.path.join(current_app.static_folder, 'uploads', 'temp', str(current_user.id))
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # 保存文件
+        file_path = os.path.join(temp_dir, unique_filename)
+        file.save(file_path)
+        
+        # 获取文件大小
+        file_size = os.path.getsize(file_path)
+        
+        # 获取文件分类
+        file_category = request.form.get('file_category', '其他文件')
+        
+        # 返回临时文件信息（存储在session中，提交申请时关联到项目）
+        return jsonify({
+            'success': True,
+            'message': '文件上传成功',
+            'file': {
+                'temp_path': os.path.join('uploads', 'temp', str(current_user.id), unique_filename),
+                'original_name': original_filename,
+                'size': file_size,
+                'category': file_category
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"文件上传失败: {str(e)}")
+        import traceback
+        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'文件上传失败: {str(e)}'})
