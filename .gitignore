@@ -46,3 +46,5 @@ venv/
 
 .sh
 .ps1
+
+config/config.py
