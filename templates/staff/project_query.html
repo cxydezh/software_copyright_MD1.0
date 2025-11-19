@@ -158,6 +158,7 @@
                                                 <th>流水号</th>
                                                 <th>归档时间</th>
                                                 <th>价格</th>
+                                                <th>操作</th>
                                             </tr>
                                         </thead>
                                         <tbody id="archivedSoftwareTable">
@@ -178,6 +179,7 @@
                                                 <th>目标期刊</th>
                                                 <th>归档时间</th>
                                                 <th>价格</th>
+                                                <th>操作</th>
                                             </tr>
                                         </thead>
                                         <tbody id="archivedPaperTable">
@@ -198,6 +200,7 @@
                                                 <th>专利号</th>
                                                 <th>归档时间</th>
                                                 <th>价格</th>
+                                                <th>操作</th>
                                             </tr>
                                         </thead>
                                         <tbody id="archivedPatentTable">
@@ -269,7 +272,10 @@ function displayActiveProjects(data) {
                 <td>${p.apply_time || '-'}</td>
                 <td>¥${p.price}</td>
                 <td>
-                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'software\', ' + p.id + ')">归档</button>' : '未结算'}
+                    <a href="/staff/project/${p.id}/view" class="btn btn-sm btn-info me-1" title="查看详情">
+                        <i class="fas fa-eye"></i> 查看详情
+                    </a>
+                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'software\', ' + p.id + ')">归档</button>' : '<span class="text-muted">未结算</span>'}
                 </td>
             </tr>
         `).join('');
@@ -290,7 +296,10 @@ function displayActiveProjects(data) {
                 <td>${p.apply_time || '-'}</td>
                 <td>¥${p.price}</td>
                 <td>
-                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'paper\', ' + p.id + ')">归档</button>' : '未结算'}
+                    <a href="/staff/project/${p.id}/view?type=paper" class="btn btn-sm btn-info me-1" title="查看详情">
+                        <i class="fas fa-eye"></i> 查看详情
+                    </a>
+                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'paper\', ' + p.id + ')">归档</button>' : '<span class="text-muted">未结算</span>'}
                 </td>
             </tr>
         `).join('');
@@ -311,7 +320,10 @@ function displayActiveProjects(data) {
                 <td>${p.apply_time || '-'}</td>
                 <td>¥${p.price}</td>
                 <td>
-                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'patent\', ' + p.id + ')">归档</button>' : '未结算'}
+                    <a href="/staff/project/${p.id}/view?type=patent" class="btn btn-sm btn-info me-1" title="查看详情">
+                        <i class="fas fa-eye"></i> 查看详情
+                    </a>
+                    ${p.is_settled ? '<button class="btn btn-sm btn-warning" onclick="archiveProject(\'patent\', ' + p.id + ')">归档</button>' : '<span class="text-muted">未结算</span>'}
                 </td>
             </tr>
         `).join('');
@@ -333,10 +345,15 @@ function displayArchivedProjects(data) {
                 <td>${p.serial_number || '-'}</td>
                 <td>${p.archive_time || '-'}</td>
                 <td>¥${p.price}</td>
+                <td>
+                    <a href="/staff/project/${p.id}/view?archived=true" class="btn btn-sm btn-info" title="查看详情">
+                        <i class="fas fa-eye"></i> 查看详情
+                    </a>
+                </td>
             </tr>
         `).join('');
     } else {
-        archivedSoftwareTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无归档数据</td></tr>';
+        archivedSoftwareTable.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无归档数据</td></tr>';
     }
     
     // 论文归档
@@ -350,10 +367,15 @@ function displayArchivedProjects(data) {
                 <td>${p.target_journal || '-'}</td>
                 <td>${p.archive_time || '-'}</td>
                 <td>¥${p.price}</td>
+                <td>
+                    <a href="/staff/project/${p.id}/view?type=paper&archived=true" class="btn btn-sm btn-info" title="查看详情">
+                        <i class="fas fa-eye"></i> 查看详情
+                    </a>
+                </td>
             </tr>
         `).join('');
     } else {
-        archivedPaperTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无归档数据</td></tr>';
+        archivedPaperTable.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无归档数据</td></tr>';
     }
     
     // 专利归档
@@ -367,10 +389,15 @@ function displayArchivedProjects(data) {
                 <td>${p.patent_number || '-'}</td>
                 <td>${p.archive_time || '-'}</td>
                 <td>¥${p.price}</td>
+                <td>
+                    <a href="/staff/project/${p.id}/view?type=patent&archived=true" class="btn btn-sm btn-info" title="查看详情">
+                        <i class="fas fa-eye"></i> 查看详情
+                    </a>
+                </td>
             </tr>
         `).join('');
     } else {
-        archivedPatentTable.innerHTML = '<tr><td colspan="6" class="text-center text-muted">暂无归档数据</td></tr>';
+        archivedPatentTable.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无归档数据</td></tr>';
     }
 }
 

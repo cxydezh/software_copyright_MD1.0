@@ -48,3 +48,8 @@ venv/
 .ps1
 
 config/config.py
+.pdf
+.doc
+.docx
+.xlsx
+.xls

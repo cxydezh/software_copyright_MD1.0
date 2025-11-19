@@ -189,6 +189,67 @@ def executor_dashboard():
                          approved_projects=approved_projects,
                          stats=stats)
 
+@staff_bp.route('/project/<int:project_id>/view')
+@login_required
+def project_view(project_id):
+    """项目详情查看页面（只读，用于项目查询）"""
+    if not hasattr(current_user, 'user_type') or current_user.user_type != 'staff':
+        flash('权限不足', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # 获取项目类型参数和是否归档参数
+    project_type = request.args.get('type', 'software')
+    is_archived = request.args.get('archived', 'false').lower() == 'true'
+    
+    # 根据项目类型和是否归档获取项目
+    if is_archived:
+        # 归档项目
+        if project_type == 'paper':
+            from database.models import ArchivedPaperProject
+            project = ArchivedPaperProject.query.get_or_404(project_id)
+        elif project_type == 'patent':
+            from database.models import ArchivedPatentProject
+            project = ArchivedPatentProject.query.get_or_404(project_id)
+        else:
+            from database.models import ArchivedSoftwareProject
+            project = ArchivedSoftwareProject.query.get_or_404(project_id)
+    else:
+        # 活动项目
+        if project_type == 'paper':
+            from database.models import PaperProject
+            project = PaperProject.query.get_or_404(project_id)
+        elif project_type == 'patent':
+            from database.models import PatentProject
+            project = PatentProject.query.get_or_404(project_id)
+        else:
+            project = Project.query.get_or_404(project_id)
+    
+    # 获取项目申请人信息
+    applicant = User.query.get(project.applicant_id) if hasattr(project, 'applicant_id') and project.applicant_id else None
+    
+    # 获取项目相关的消息（归档项目可能没有消息）
+    project_messages = []
+    if not is_archived:
+        project_messages = Message.query.filter_by(project_id=project_id).order_by(Message.create_time.desc()).all()
+    
+    # 获取项目文件列表（包括证书文件）
+    project_files = ProjectFile.query.filter_by(
+        project_id=project_id,
+        project_type=project_type
+    ).order_by(ProjectFile.upload_time.desc()).all()
+    
+    # 筛选证书文件
+    certificate_files = [f for f in project_files if f.file_category == '证书文件']
+    
+    return render_template('staff/project_view.html',
+                         project=project,
+                         applicant=applicant,
+                         messages=project_messages,
+                         project_files=project_files,
+                         certificate_files=certificate_files,
+                         project_type=project_type,
+                         is_archived=is_archived)
+
 @staff_bp.route('/project/<int:project_id>')
 @login_required
 def project_detail(project_id):
@@ -1231,25 +1292,66 @@ def download_project_file(project_id, file_id):
             id=file_id, 
             project_id=project_id, 
             project_type='software'
-        ).first_or_404()
+        ).first()
+        
+        if not project_file:
+            return jsonify({'success': False, 'message': '文件记录不存在'}), 404
+        
+        # 保存文件名和路径（在删除记录前保存）
+        file_name = project_file.file_name
+        file_path_stored = project_file.file_path
         
         # 构建文件完整路径
         file_path = os.path.join(current_app.static_folder, project_file.file_path)
         
-        if not os.path.exists(file_path):
-            return jsonify({'success': False, 'message': '文件不存在'})
+        # 检查文件是否存在
+        if not os.path.exists(file_path) or not os.path.isfile(file_path):
+            # 文件不存在，自动删除数据库记录
+            current_app.logger.warning(f"文件不存在，自动删除数据库记录 - 文件ID: {file_id}, 项目ID: {project_id}, 文件路径: {file_path_stored}")
+            
+            try:
+                # 删除数据库记录
+                db.session.delete(project_file)
+                db.session.commit()
+                
+                current_app.logger.info(f"已删除不存在的文件记录 - 文件ID: {file_id}, 文件名: {file_name}")
+                
+                # 返回友好的错误消息
+                return jsonify({
+                    'success': False, 
+                    'message': f'文件不存在，已自动删除相关记录。文件名: {file_name}'
+                }), 200  # 使用200状态码，因为操作已成功完成（删除记录）
+            except Exception as delete_error:
+                db.session.rollback()
+                current_app.logger.error(f"删除文件记录失败: {str(delete_error)}")
+                return jsonify({
+                    'success': False, 
+                    'message': f'文件不存在，且删除数据库记录时出错: {str(delete_error)}'
+                }), 500
         
         # 发送文件
-        return send_file(
-            file_path,
-            as_attachment=True,
-            download_name=project_file.file_name,
-            mimetype=mimetypes.guess_type(project_file.file_name)[0] or 'application/octet-stream'
-        )
+        try:
+            return send_file(
+                file_path,
+                as_attachment=True,
+                download_name=project_file.file_name,
+                mimetype=mimetypes.guess_type(project_file.file_name)[0] or 'application/octet-stream'
+            )
+        except Exception as send_error:
+            current_app.logger.error(f"发送文件失败: {str(send_error)}")
+            return jsonify({
+                'success': False, 
+                'message': f'文件发送失败: {str(send_error)}'
+            }), 500
         
     except Exception as e:
         current_app.logger.error(f"文件下载失败: {str(e)}")
-        return jsonify({'success': False, 'message': f'文件下载失败: {str(e)}'})
+        import traceback
+        current_app.logger.error(f"错误堆栈: {traceback.format_exc()}")
+        return jsonify({
+            'success': False, 
+            'message': f'文件下载失败: {str(e)}'
+        }), 500
 
 @staff_bp.route('/project/<int:project_id>/file/<int:file_id>/delete', methods=['POST'])
 @login_required

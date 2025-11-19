@@ -469,21 +469,56 @@ def download_project_file(project_id, file_id):
             id=file_id, 
             project_id=project_id, 
             project_type='software'
-        ).first_or_404()
+        ).first()
+        
+        if not project_file:
+            return jsonify({'success': False, 'message': '文件记录不存在'}), 404
+        
+        # 保存文件名和路径（在删除记录前保存）
+        file_name = project_file.file_name
+        file_path_stored = project_file.file_path
         
         # 构建文件完整路径
         file_path = os.path.join(current_app.static_folder, project_file.file_path)
         
-        if not os.path.exists(file_path):
-            return jsonify({'success': False, 'message': '文件不存在'})
+        # 检查文件是否存在
+        if not os.path.exists(file_path) or not os.path.isfile(file_path):
+            # 文件不存在，自动删除数据库记录
+            current_app.logger.warning(f"文件不存在，自动删除数据库记录 - 文件ID: {file_id}, 项目ID: {project_id}, 文件路径: {file_path_stored}")
+            
+            try:
+                # 删除数据库记录
+                db.session.delete(project_file)
+                db.session.commit()
+                
+                current_app.logger.info(f"已删除不存在的文件记录 - 文件ID: {file_id}, 文件名: {file_name}")
+                
+                return jsonify({
+                    'success': False, 
+                    'message': f'文件不存在，已自动删除相关记录。文件名: {file_name}'
+                }), 200
+            except Exception as delete_error:
+                db.session.rollback()
+                current_app.logger.error(f"删除文件记录失败: {str(delete_error)}")
+                return jsonify({
+                    'success': False, 
+                    'message': f'文件不存在，且删除数据库记录时出错: {str(delete_error)}'
+                }), 500
         
         # 发送文件
-        return send_file(
-            file_path,
-            as_attachment=True,
-            download_name=project_file.file_name,
-            mimetype=mimetypes.guess_type(project_file.file_name)[0] or 'application/octet-stream'
-        )
+        try:
+            return send_file(
+                file_path,
+                as_attachment=True,
+                download_name=project_file.file_name,
+                mimetype=mimetypes.guess_type(project_file.file_name)[0] or 'application/octet-stream'
+            )
+        except Exception as send_error:
+            current_app.logger.error(f"发送文件失败: {str(send_error)}")
+            return jsonify({
+                'success': False, 
+                'message': f'文件发送失败: {str(send_error)}'
+            }), 500
         
     except Exception as e:
         current_app.logger.error(f"文件下载失败: {str(e)}")
