@@ -13,3 +13,4 @@ PyPDF2==3.0.1
 requests==2.31.0
 bleach==6.1.0
 itsdangerous==2.1.2
+dotenv==1.0.1

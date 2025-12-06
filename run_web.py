@@ -19,7 +19,7 @@ def main():
     try:
         # 启动应用
         app.run(
-            host='0.0.0.0',
+            host='::',
             port=5000,
             debug=True,
             threaded=True
