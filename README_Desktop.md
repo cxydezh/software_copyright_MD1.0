@@ -14,6 +14,7 @@
 
 ## 配置服务器地址
 ## 配置服务器的密码（环境变量:DB_PASSWORD）
+## 配置环境变量：APPEMAILCOUNT,APPEMAILPASSWORD,APPEMAILSMTP。
 
 首次使用需要配置服务器地址：
 

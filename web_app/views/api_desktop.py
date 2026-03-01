@@ -315,8 +315,8 @@ def desktop_update_project_status():
             return jsonify({'success': False, 'message': '项目不存在'})
         
         # 检查权限（业务员和执行者都可以更新状态）
-        if project.confirmer_id != user.id and project.executor_id != user.id:
-            return jsonify({'success': False, 'message': '您没有权限操作此项目'})
+        if project.confirmer_id != user.id or project.executor_id != user.id:
+            return jsonify({'success': False, 'message': '您没有权限操作此项目'}) 
         
         # 验证状态转换
         valid_statuses = ['执行中', '已完成', '已上传', '已获取流水号', '证书完成', '已归档']
@@ -401,7 +401,7 @@ def desktop_settle_project():
             return jsonify({'success': False, 'message': '项目不存在'})
         
         # 检查权限（业务员和执行者都可以标记收费）
-        if project.confirmer_id != user.id and project.executor_id != user.id:
+        if project.confirmer_id != user.id or project.executor_id != user.id:
             return jsonify({'success': False, 'message': '您没有权限操作此项目'})
         
         try:
@@ -466,7 +466,7 @@ def desktop_archive_project():
             return jsonify({'success': False, 'message': '项目不存在'})
         
         # 检查权限（业务员和执行者都可以归档项目）
-        if project.confirmer_id != user.id and project.executor_id != user.id:
+        if project.confirmer_id != user.id or project.executor_id != user.id:
             return jsonify({'success': False, 'message': '您没有权限操作此项目'})
         
         # 检查是否已结算
